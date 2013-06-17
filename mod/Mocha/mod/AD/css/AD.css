@@ -1,0 +1,245 @@
+/**********************
+ *  热门推荐广告位      *
+ **********************/
+.bannerAds {
+    float: left;
+    display: inline;
+    visibility: hidden;
+    position: relative;
+    width: 757px;
+    height: auto;
+    overflow: hidden;
+    border: solid 1px #cfd4de;
+    margin-left: 6px;
+    margin-top: 10px;
+    margin-bottom: 10px;
+}
+.bannerAds div.triggers {
+    position: absolute;
+    left: -1px;
+    width: 759px;
+    height: 28px;
+    overflow-y: visible;
+    border-bottom: solid 1px #cfd4de;
+    background: url("../img/recommendTriggerbg.png") repeat-x;
+}
+.bannerAds div.triggers a {
+    position: relative;
+    top: 5px;
+    padding-left: 5px;
+    padding-right: 5px;
+    font: bold 12px "宋体";
+    cursor: pointer;
+}
+.bannerAds div.triggers span {
+    float: left;
+    height: 28px;
+    line-height: 28px;
+    border-bottom: solid 1px #cfd4de;
+    overflow: hidden;
+    text-align: center;
+    color: #6a6868;
+    font-family: '宋体';
+    font-size: 12px;
+    cursor: pointer;
+}
+.bannerAds div.triggers span.selected {
+    width: 80px;
+    height: 28px;
+    overflow: hidden;
+    background: #ffffff url("../img/recTitle.png") no-repeat;
+    border-left: solid 1px #cfd4de;
+    border-right: solid 1px #cfd4de;
+    border-bottom: solid 1px #ffffff;
+}
+
+/* 更多链接 */
+.bannerAds span.more {
+    position: absolute;
+    right: -4px;
+    top: -1px;
+    width: 38px;
+    height: 30px;
+    line-height: 30px;
+    overflow: hidden;
+    text-align: center;
+    color: #6a6868;
+    font-family: '宋体';
+    font-size: 12px;
+    background: #f8f8f8 url("../img/recommendMore.png") no-repeat 0px 0px;
+    padding-left: 1px;
+    padding-right: 1px;
+    cursor: pointer;
+}
+.bannerAds span.hover {
+    background: #f8f8f8 url("../img/recommendMore.png") no-repeat 0px -30px;
+}
+.bannerAds span.press {
+    background: #f8f8f8 url("../img/recommendMore.png") no-repeat 0px -60px;
+}
+
+/* 面板 */
+.bannerAds div.panel {
+    position: relative;
+    top: 29px;
+    width: 758px;
+    height: auto;
+    overflow: hidden;
+    background-color: #ffffff;
+    padding: 5px 5px 34px 5px;
+}
+
+.bannerAds div.panel img {
+    float: left;
+    width: 233px;
+    height: 122px;
+    overflow: hidden;
+    margin-right: 24px;
+}
+
+.bannerAds div.panel img.last {
+    margin-right: 0px;
+}
+
+/* 一些字体颜色 */
+.bannerAds a.blue {
+    color: #3f78ff;
+}
+.bannerAds a.purple {
+    color: #bf49bb;
+}
+.bannerAds a.darkgreen {
+    color: #00a578;
+}
+.bannerAds a.lightgreen {
+    color: #6cb602;
+}
+.bannerAds a.salmon {
+    color: #ff6161;
+}
+.bannerAds a.brike {
+    color: #DD3A13;
+}
+.bannerAds a.sea {
+    color: #138ea9;
+}
+.bannerAds a.pink {
+    color: #FF3888;
+}
+.bannerAds a.yellowgreen {
+    color: #bba301;
+}
+
+
+
+/**********************
+ *  最底部通用广告面板   *
+ **********************/
+.commonAds {
+    float: left;
+    display: none;
+    position: relative;
+    overflow: hidden;
+    border: solid 1px #cfd4de;
+    margin-top: 4px;
+    margin-left: 6px;
+    margin-bottom: 10px;
+    width: 757px;
+    height: auto;
+}
+.commonAds .title {
+    width: 100%;
+    height: 28px;
+    background: url("../img/commonAdsTitlebg.png") repeat-x;
+    border-bottom: solid 1px #cfd4de;
+}
+.commonAds .title .icon {
+    display: block;
+    width: 80px;
+    height: 28px;
+    background: url("../img/commonAdsTitle.png") no-repeat;
+}
+
+/* 更多按钮 */
+.commonAds .title .more {
+    position: absolute;
+    right: -4px;
+    top: -1px;
+    width: 38px;
+    height: 30px;
+    line-height: 30px;
+    overflow: hidden;
+    text-align: center;
+    color: #6a6868;
+    font-family: "宋体";
+    font-size: 12px;
+    background: #f8f8f8 url("../img/recommendMore.png") no-repeat 0px 0px;
+    padding-left: 1px;
+    padding-right: 1px;
+    cursor: pointer;
+}
+.commonAds .title span.hover {
+    background: #f8f8f8 url("../img/recommendMore.png") no-repeat 0px -30px;
+}
+.commonAds .title span.press {
+    background: #f8f8f8 url("../img/recommendMore.png") no-repeat 0px -60px;
+}
+.commonAds .title a {
+    text-decoration: none;
+}
+
+.commonAds .textpanel {
+    width: 757px;
+    height: auto;
+    padding: 5px;
+    background-color: #ffffff;
+}
+
+.commonAds .textpanel a {
+    line-height: 28px;
+    padding-left: 2px;
+    padding-right: 2px;
+    margin-left: 3px;
+    margin-right: 3px;
+    color: #4c4c4c;
+    font-size: 13px;
+    word-break: keep-all;
+    cursor: pointer;
+    text-decoration: none;
+}
+.commonAds .textpanel a:hover {
+    color: #eb3700;
+    text-decoration: underline;
+}
+
+/* 一些字体颜色 */
+.commonAds .textpanel .blue {
+    color: #3f78ff;
+}
+.commonAds .textpanel .purple {
+    color: #bf49bb;
+}
+.commonAds .textpanel .darkgreen {
+    color: #00a578;
+}
+.commonAds .textpanel .lightgreen {
+    color: #6cb602;
+}
+.commonAds .textpanel .salmon {
+    color: #ff6161;
+}
+.commonAds .textpanel .brike {
+    color: #DD3A13;
+}
+.commonAds .textpanel .sea {
+    color: #138ea9;
+}
+.commonAds .textpanel .pink {
+    color: #FF3888;
+}
+.commonAds .textpanel .yellowgreen {
+    color: #bba301;
+}
+.commonAds .textpanel .underline {
+    text-decoration: none;
+}

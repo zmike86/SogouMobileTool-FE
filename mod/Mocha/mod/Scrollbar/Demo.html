@@ -1,0 +1,58 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta http-equiv="content-type" content="text/html;charset=utf-8" />
+    <title>Scrollbar Demo</title>
+    <link rel="stylesheet" type="text/css" href="../../../../../style/reset.css"  />
+    <link rel="stylesheet" type="text/css" href="css/demo.css"  />
+    <script type="text/javascript" src="../../../../lib/dojo/dojo.js"></script>
+    <script type="text/javascript" src="js/ScrollBar.js"></script>
+</head>
+<body>
+<div class="scrollContainer">
+    <div class="listContainer">
+        <ul class="content">
+            <li>item1</li>
+            <li>item2</li>
+            <li>item3</li>
+            <li>item4</li>
+            <li>item5</li>
+            <li>item6</li>
+            <li>item7</li>
+            <li>item8</li>
+            <li>item9</li>
+            <li>item10</li>
+            <li>item11</li>
+            <li>item12</li>
+            <li>item13</li>
+            <li>item14</li>
+            <li>item15</li>
+            <li>item16</li>
+            <li>item17</li>
+            <li>item18</li>
+            <li>item1</li>
+            <li>item2</li>
+            <li>item3</li>
+            <li>item4</li>
+            <li>item5</li>
+            <li>item6</li>
+            <li>item7</li>
+            <li>item8</li>
+            <li>item9</li>
+            <li>item10</li>
+            <li>item11</li>
+            <li>item12</li>
+            <li>item13</li>
+            <li>item14</li>
+            <li>item15</li>
+        </ul>
+    </div>
+</div>
+<script type="text/javascript">
+    new Mocha.mod.Scrollbar({
+        container: dojo.query('.scrollContainer')[0],
+        content: dojo.query('.listContainer')[0]
+    });
+</script>
+</body>
+</html>
