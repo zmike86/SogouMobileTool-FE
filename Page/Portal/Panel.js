@@ -2,29 +2,46 @@
  * Static Panel component
  */
 
-(function () {
+(function (global, undefined) {
 
     dojo.declare('website.Portal.Panel', [website.IComponent], {
-        // attr
+        // 属性
         config: null,
         parentControl: null,
         template: null,
-        // dom
+        useTip: false,
+        _handlers: null,
+        // 元素
         content: null,
         moredom: null,
 
+        tooltip: null,
+
+        /**
+         * 构造方法
+         * @param configObject
+         */
         constructor: function (configObject) {
             this.container = configObject.container;
             this.content = dojo.query('ul.panel', this.container)[0];
             this.parentControl = configObject.parent;
             this.moredom = dojo.query('span.more', this.container)[0];
             this.template = YayaTemplate(dojo.byId(configObject.tmplId).innerHTML);
+            this._handlers = [];
+            if (configObject.useTip) {
+                this.tooltip = this.parentControl.tooltip;
+            }
+            dojo.connect(window, 'onbeforeunload', this, this.dispose);
         },
 
+        /**
+         * 设置数据源
+         * @param json
+         */
         setData: function (json) {
-            if (!json || !json.list)
-                return;
+            if (!json || !json.list) return;
 
+            this.dispose();
             var html = this.template.render(json);
             this.content.innerHTML = html;
             this.data = json;
@@ -32,57 +49,66 @@
             this.show();
         },
 
+        /**
+         * 绑定数据后绑定事件
+         */
         bind: function () {
-            dojo.query('li', this.content)
-            .onmouseenter(function(e){
+            var me = this;
+            dojo.query('li', this.content).onmouseenter(function(e){
                 dojo.addClass(e.target, 'hover');
-            })
-            .onmouseleave(function(e){
+                me.tooltip && me.tooltip.setData(e.target).show();
+            }).onmouseleave(function(e){
                 dojo.removeClass(e.target, 'hover');
-            })
-            .forEach(function (li) {
+                me.tooltip && me.tooltip.hide();
+            }).forEach(function (li) {
                 var btn = dojo.query('span.installbtn', li)[0];
-                dojo.connect(btn, 'mouseenter', this, function (evt) {
-                    if (/disable/.test(btn.className))
-                        return;
+                me._handlers.push(dojo.connect(btn, 'mouseenter', function () {
+                    if (/disable/.test(btn.className)) return;
                     dojo.addClass(btn, 'installbtnhover');
-                });
-                dojo.connect(btn, 'mouseleave', this, function (evt) {
-                    if (/disable/.test(btn.className))
-                        return;
+                }));
+                me._handlers.push(dojo.connect(btn, 'mouseleave', function () {
+                    if (/disable/.test(btn.className)) return;
                     dojo.removeClass(btn, 'installbtnhover installbtnpress');
-                });
-                dojo.connect(btn, 'mousedown', this, function (evt) {
-                    if (/disable/.test(btn.className))
-                        return;
+                }));
+                me._handlers.push(dojo.connect(btn, 'mousedown', function () {
+                    if (/disable/.test(btn.className)) return;
                     dojo.addClass(btn, 'installbtnpress');
-                });
-                dojo.connect(btn, 'mouseup', this, function (evt) {
-                    if (/disable/.test(btn.className))
-                        return;
+                }));
+                me._handlers.push(dojo.connect(btn, 'mouseup', function () {
+                    if (/disable/.test(btn.className)) return;
                     dojo.removeClass(btn, 'installbtnpress');
-                });
-                dojo.connect(btn, 'click', this, website.EventManager.on);
+                }));
+                me._handlers.push(dojo.connect(btn, 'click', me, website.EventManager.on));
 
-            }, this);
+            });
 
-            dojo.connect(this.moredom, 'mouseover', this, function (evt) {
-                dojo.addClass(this.moredom, 'hover');
+            me._handlers.push(dojo.connect(me.moredom, 'mouseover', function () {
+                dojo.addClass(me.moredom, 'hover');
+            }));
+            me._handlers.push(dojo.connect(me.moredom, 'mouseout', function () {
+                dojo.removeClass(me.moredom, 'hover press');
+            }));
+            me._handlers.push(dojo.connect(me.moredom, 'mousedown', function () {
+                dojo.addClass(me.moredom, 'press');
+            }));
+            me._handlers.push(dojo.connect(me.moredom, 'mouseup', function () {
+                dojo.removeClass(me.moredom, 'press');
+            }));
+            me._handlers.push(dojo.connect(me.moredom, 'click', function () {
+                window.location = 'NewArrival.html#' + me.parentControl.type;
+            }));
+        },
+
+        /**
+         * @implements IDispose
+         */
+        disposeInternal_: function () {
+            dojo.forEach(this._handlers, function (handle) {
+                dojo.disconnect(handle);
             });
-            dojo.connect(this.moredom, 'mouseout', this, function (evt) {
-                dojo.removeClass(this.moredom, 'hover press');
-            });
-            dojo.connect(this.moredom, 'mousedown', this, function(evt) {
-                dojo.addClass(evt.target, 'press');
-            });
-            dojo.connect(this.moredom, 'mouseup', this, function(evt) {
-                dojo.removeClass(evt.target, 'press');
-            });
-            dojo.connect(this.moredom, 'click', this, function(){
-                window.location = 'NewArrival.html#' + this.parentControl.type;
-            });
+            this._handlers = [];
         }
 
     });
-})();
+})(this);
 

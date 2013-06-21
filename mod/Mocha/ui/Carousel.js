@@ -5,12 +5,12 @@
 (function (global, undefined) {
 
     dojo.declare('Sogou.ui.Carousel', null, {
-
         // attr
         prevBtnCls: 'Sogou-ui-prev-btn',
         nextBtnCls: 'Sogou-ui-next-btn',
         disableBtnCls: 'Sogou-ui-disable-btn',
         config: null,
+        _handlers: null,
         // dom
         prevBtn: null,
         nextBtn: null,
@@ -24,24 +24,25 @@
                 new Sogou.mod.Effects()
             ];
             this.switchable = new Sogou.mod.Switchable(this.config);
+            this._handlers = [];
 
             var config = this.config,
                 disableCls = config.disableBtnCls;
 
-            dojo.connect(config.prevBtn, 'click', this, function(evt) {
+            this._handlers.push(dojo.connect(config.prevBtn, 'click', this, function(evt) {
                 dojo.stopEvent(evt);
                 var target = evt.target;
                 if (!dojo.hasClass(target, disableCls)) {
                     this.switchable.prev();
                 }
-            });
-            dojo.connect(config.nextBtn, 'click', this, function (evt) {
+            }));
+            this._handlers.push(dojo.connect(config.nextBtn, 'click', this, function (evt) {
                 dojo.stopEvent(evt);
                 var target = evt.target;
                 if (!dojo.hasClass(target, disableCls)) {
                     this.switchable.next();
                 }
-            });
+            }));
 
             var onPublish = dojo.hitch(this, function () {
                 dojo.publish(this.switchable.gid + ':itemselected', { item: this });
@@ -64,6 +65,14 @@
             // publish itemselected event
             dojo.query(this.panels).connect('click', onPublish);
             dojo.query(this.panels).connect('focus', onPublish);
+        },
+
+        dispose: function () {
+            dojo.forEach(this._handlers, function(handle){
+                dojo.disconnect(handle);
+            });
+            if (this.switchable && this.switchable.dispose)
+                this.switchable.dispose();
         }
     });
 

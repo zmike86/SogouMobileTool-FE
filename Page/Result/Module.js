@@ -2,13 +2,14 @@
  * @description module logic for Search Result page
  * @creator Leo
  */
-(function () {
+(function (global, undefined) {
 
     var LinkerChar = '_';
     var BASEPATH = 'website_result_';
     // 这里的type是预示着从哪个版块过来的
     // 如果从首页过来则是应用
     var TYPE = location.hash.split('/')[0].replace('#', '') || 'app';
+    var URL = "http://zhushou.sogou.com/data/data.html?Os_type=Android&data=@";
 
     (function(){
         // 正常情况下得到的queryString就是编码后的关键字了
@@ -25,15 +26,13 @@
     })();
 
     dojo.declare('website.Result.Module', [website.IModule], {
-        // attr
+        // 属性
         type:           null,
         category:       null,
         sort:           null,
         pageIndex:      null,
         keyword:        '',
         footer: dojo.query('div.footer')[0],
-
-        // com
         loader:         null,
         storePath:      null,
 
@@ -91,21 +90,73 @@
         systemID:       9,
         PAGE_ID:        'result',
 
-        // components
+        // 组件
         navigator:      null,
         pager:          null,
         downloadRank:   null,
         recPanel:       null,
         Ads:            null,
 
+        /**
+         * 构造方法
+         */
         constructor: function () {
-            // this.getPDAInfor();
             this.resolvekeyWord();
             this.resolveHash();
             this.resolvePath();
-
             this.IDS.pager = this.storePath;
-            // adjust post json data
+            this.initializeComponents();
+
+            var me = this;
+            dojo.subscribe('/dojo/hashchange', function(hash) {
+                me.resolveHash();
+                me.resolvePath();
+
+                me.IDS.pager = me.storePath;
+                // 发送请求
+                var o, json;
+                // 生成请求json
+                o = {data:{}};
+                o.data[me.storePath] = {
+                    module: 'search',
+                    groupid: me.category,
+                    sort: me.sort,
+                    keyword: encodeURIComponent(me.keyword),
+                    start: (me.pageIndex - 1) * 14,
+                    limit: 14,
+                    order: 'down'
+                };
+                o.returnFormat = 'jsonp';
+                json = JSON.stringify(o);
+                dojo.io.script.get({
+                    url: URL.replace('@', json),
+                    callbackParamName: 'callback'
+                }).then(function(data){
+                    if (!data) {
+                        if(me.errorCallback && (typeof me.errorCallback === 'function'))
+                            me.errorCallback();
+                        return;
+                    }
+
+                    var serialization;
+                    try {
+                        serialization = JSON.parse(data);
+                    } catch(e) {
+                        throw new Error("request HomePage data from server format error");
+                    }
+                    me.setData(serialization);
+                });
+                //window.external.GetWebsiteAPPInfo_Async(json, 'jsonCallback', document);
+            });
+        },
+
+        /**
+         * 生成http请求的json数据格式
+         * @override
+         * @return {json}
+         */
+        generatePostJson: function () {
+            // 修正要请求的数据
             this.postData.data[this.type][this.storePath] = {
                 module: 'search',
                 groupid: this.category,
@@ -116,51 +167,11 @@
                 order: 'down'
             };
 
-            var self = this;
-            // cross domain ajax request callback
-            window.jsonCallback = function (data) {
-                if (!data) {
-                    if (self.errorCallback && (typeof self.errorCallback === 'function'))
-                        self.errorCallback();
-                    return;
-                }
-
-                var serialization;
-                try {
-                    serialization = JSON.parse(data);
-                } catch (e) {
-                    throw new Error("request HomePage data from server format error");
-                }
-                self.setData(serialization);
-            };
-
-            this.initializeComponents();
-
-            dojo.subscribe('/dojo/hashchange', function(hash) {
-                self.resolveHash();
-                self.resolvePath();
-
-                self.IDS.pager = self.storePath;
-                // 发送请求
-                var o, json;
-                // 生成请求json
-                o = {data:{}};
-                o.data[self.storePath] = {
-                    module: 'search',
-                    groupid: self.category,
-                    sort: self.sort,
-                    keyword: encodeURIComponent(self.keyword),
-                    start: (self.pageIndex-1) * 14,
-                    limit: 14,
-                    order: 'down'
-                };
-                json = JSON.stringify(o);
-                window.external.GetWebsiteAPPInfo_Async(json, 'jsonCallback', document);
-            });
+            return this.inherited(arguments);
         },
 
         /**
-         * initialize included components
+         * 初始化页面组件
          */
         initializeComponents: function () {
             this.navigator = new website.Result.Navigator({
@@ -249,8 +260,8 @@
         },
 
         /**
-         * Data from server side fills in page components
-         * @param data
+         * 设置页面组件数据源
+         * @param {object} data
          */
         setData: function (data) {
             if (!data)
@@ -286,25 +297,23 @@
         },
 
         /**
-         *  First time load page to check whether there
-         *  has data in localStorage
+         *  发起页面数据请求
          */
         getData: function () {
             this.sendRequest();
         },
 
         /**
-         * set up module app
+         * 启动模块功能
          */
         setup: function () {
             this.getData();
-            //@PingBack
-            $PingBack('msite_' + this.type + '_result_bv');
+            // @PingBack
+            // $PingBack('msite_' + this.type + '_result_bv');
         }
-
     });
-})();
 
-var module;
-module = new website.Result.Module(this);
-module.setup();
+    var module;
+    module = new website.Result.Module();
+    module.setup();
+})(this);

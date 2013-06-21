@@ -4,7 +4,7 @@
  * @creator Leo
  */
 (function (global, undefined) {
-    var URL = "http://zhushou.sogou.com/data/data.html?callback=jsonCallback&data={returnFormat:jsonp,data:[]}]";
+    var URL = "http://zhushou.sogou.com/data/data.html?Os_type=Android&data=@";
 
     dojo.declare('website.IModule', null, {
 
@@ -56,7 +56,26 @@
          */
         sendRequest: function () {
             var json = this.generatePostJson();
-            window.external.GetWebsiteAPPInfo_Async(json, 'jsonCallback', document);
+            var me = this;
+            // window.external.GetWebsiteAPPInfo_Async(json, 'jsonCallback', document);
+            dojo.io.script.get({
+                url: URL.replace('@', json),
+                callbackParamName: 'callback'
+            }).then(function(data){
+                if (!data) {
+                    if(me.errorCallback && (typeof me.errorCallback === 'function'))
+                        me.errorCallback();
+                    return;
+                }
+
+                var serialization;
+                try {
+                    serialization = JSON.parse(data);
+                } catch(e) {
+                    throw new Error("request HomePage data from server format error");
+                }
+                me.setData(serialization);
+            });
         },
         /**
          * 生成http请求的json数据格式
@@ -68,6 +87,7 @@
                 if (hasOwn.call(this.postData.data[this.type], n) && this.postData.data[this.type][n])
                     o.data[n] = this.postData.data[this.type][n];
             }
+            o.returnFormat = 'jsonp';
             return JSON.stringify(o);
         }
     });

@@ -1,12 +1,17 @@
+/**
+ * @description module logic for Child page
+ * @creator Leo
+ */
 (function (global, undefined) {
 
     var location = window.location;
     var LinkerChar = '_';
     var BASEPATH = 'website_children_';
     var TYPE = location.hash.split('/')[0].replace('#', '') || 'game';
+    var URL = "http://zhushou.sogou.com/data/data.html?Os_type=Android&data=@";
 
     dojo.declare('website.Children.Module', [website.IModule], {
-        // attr
+        // 属性
         type: null,
         category: null,
         sort: null,
@@ -45,28 +50,85 @@
         systemID: 9,
         PAGE_ID:  'children',
         footer: dojo.query('div.footer')[0],
+        loader: null,
 
-        // components
+        // 组件
         navigator:      null,
         hotWords:       null,
         pager:          null,
         botAds:         null,
         comAds:         null,
-        loader: null,
 
+        /**
+         * 构造方法
+         */
         constructor: function () {
-            // this.getPDAInfor();
             this.resolveHash();
             this.resolvePath();
-
             this.IDS.pager = this.storePath;
-            // adjust post json data
+            this.initializeComponents();
+
+            var me = this;
+            dojo.subscribe('/dojo/hashchange', function(hash) {
+                me.resolveHash();
+                me.resolvePath();
+                me.IDS.pager = me.storePath;
+
+                // 发送请求
+                var o, json;
+                // 生成请求json
+                o = {data:{}};
+                o.data[me.storePath] = {
+                    module: 'applist',
+                    type: 'category',
+                    category_group: (me.type === 'game' ? '1033' : '1033'),
+                    sort: me.sort,
+                    start: (me.pageIndex - 1) * 54,
+                    limit: 54,
+                    order: 'down'
+                };
+                if (me.category !== 'all') {
+                    o.data[me.storePath]['categoryid'] = me.category;
+                }
+                o.returnFormat = 'jsonp';
+                json = JSON.stringify(o);
+
+                dojo.io.script.get({
+                    url: URL.replace('@', json),
+                    callbackParamName: 'callback'
+                }).then(function(data){
+                    if (!data) {
+                        if(me.errorCallback && (typeof me.errorCallback === 'function'))
+                            me.errorCallback();
+                        return;
+                    }
+
+                    var serialization;
+                    try {
+                        serialization = JSON.parse(data);
+                    } catch(e) {
+                        throw new Error("request HomePage data from server format error");
+                    }
+                    me.setData(serialization);
+                });
+
+                //window.external.GetWebsiteAPPInfo_Async(json, 'jsonCallback', document);
+            });
+        },
+
+        /**
+         * 生成http请求的json数据格式
+         * @override
+         * @return {json}
+         */
+        generatePostJson: function () {
+            // 修正要请求的数据
             this.postData.data[this.type][this.storePath] = {
                 module: 'applist',
                 type: 'category',
                 category_group: (this.type === 'game' ? '1033' : '1033'),
                 sort: this.sort,
-                start: (this.pageIndex-1) * 54,
+                start: (this.pageIndex - 1) * 54,
                 limit: 54,
                 order: 'down'
             };
@@ -74,62 +136,11 @@
                 this.postData.data[this.type][this.storePath]['categoryid'] = this.category;
             }
 
-            var self = this;
-            // cross domain ajax request callback
-            window.jsonCallback = function (data) {
-                if (!data) {
-                    if (self.errorCallback && (typeof self.errorCallback === 'function'))
-                        self.errorCallback();
-                    return;
-                }
-
-                var serialization;
-                try {
-                    serialization = JSON.parse(data);
-                } catch (e) {
-                    throw new Error("request HomePage data from server format error");
-                }
-                self.setData(serialization);
-            };
-
-            this.initializeComponents();
-
-            dojo.subscribe('/dojo/hashchange', function(hash) {
-                self.resolveHash();
-                self.resolvePath();
-                self.IDS.pager = self.storePath;
-                // 发送请求
-                var data = LocalStorage.read(self.IDS.pager),
-                    o, json;
-                if (data) {
-                    self.pager.setData(JSON.parse(data));
-                    if (self.loader) {
-                        self.loader.destroy();
-                    }
-                    self.loader = self.createImgLoader();
-                } else {
-                    // 生成请求json
-                    o = {data:{}};
-                    o.data[self.storePath] = {
-                        module: 'applist',
-                        type: 'category',
-                        category_group: (self.type === 'game' ? '1033' : '1033'),
-                        sort: self.sort,
-                        start: (self.pageIndex-1) * 54,
-                        limit: 54,
-                        order: 'down'
-                    };
-                    if (self.category !== 'all') {
-                        o.data[self.storePath]['categoryid'] = self.category;
-                    }
-                    json = JSON.stringify(o);
-                    window.external.GetWebsiteAPPInfo_Async(json, 'jsonCallback', document);
-                }
-            });
+            return this.inherited(arguments);
         },
 
         /**
-         * initialize included components
+         * 初始化页面组件
          */
         initializeComponents: function () {
             this.navigator = new website.Girl.Navigator({
@@ -152,6 +163,7 @@
                 container: dojo.query('div.commonAds')[0]
             });
         },
+
         /**
          * 根据hash取得各种排序属性
          */
@@ -179,8 +191,8 @@
         },
 
         /**
-         * Data from server side fills in page components
-         * @param data
+         * 设置页面组件数据源
+         * @param {object} data
          */
         setData: function (data) {
             if (!data)
@@ -218,8 +230,7 @@
         },
 
         /**
-         *  First time load page to check whether there
-         *  has data in localStorage
+         *  发起页面数据请求
          */
         getData: function () {
             this.sendRequest();
@@ -230,13 +241,13 @@
          */
         setup: function () {
             this.getData();
-            //@PingBack
-            $PingBack('msite_' + this.type + '_children_bv');
+            // @PingBack
+            // $PingBack('msite_' + this.type + '_children_bv');
         }
     });
 
-})(this);
+    var module;
+    module = new website.Children.Module();
+    module.setup();
 
-var module;
-module = new website.Children.Module(this);
-module.setup();
+})(this);

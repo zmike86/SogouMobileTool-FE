@@ -21,9 +21,11 @@
 
         name: 'autoplay',
         host: null,
+        _handlers: null,
 
         constructor: function (config) {
-
+            this._handlers = [];
+            dojo.connect(window, 'onbeforeunload', this, this.dispose);
         },
 
         init: function (host) {
@@ -35,14 +37,14 @@
                 return;
 
             if (config.pauseOnHover) {
-                dojo.connect(host.ele, 'mouseenter', function (evt) {
+                this._handlers.push(dojo.connect(host.ele, 'mouseenter', function (evt) {
                     host.stop();
                     host.paused = true;
-                });
-                dojo.connect(host.ele, 'mouseleave', function (evt) {
+                }));
+                this._handlers.push(dojo.connect(host.ele, 'mouseleave', function (evt) {
                     host.paused = false;
                     startAutoplay();
-                });
+                }));
             }
 
             function go () {
@@ -73,6 +75,12 @@
 
         augment: function () {
 
+        },
+
+        dispose: function () {
+            dojo.forEach(this._handlers, function(handle){
+                dojo.disconnect(handle);
+            });
         }
 
     });

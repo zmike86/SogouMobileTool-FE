@@ -1,0 +1,85 @@
+/* 提示框 */
+.tooltip {
+    display: none;
+    width: 226px;
+    height: 132px;
+    overflow: hidden;
+    position: absolute;
+    top: -100;
+    left: -100px;
+    background: url("../img/tooltip.gif") no-repeat;
+    z-index: 999;
+}
+.tooltip .name {
+    position: absolute;
+    left: 16px;
+    top: 12px;
+    width: 200px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 12px;
+    font-weight: bold;
+    color: #4c4c4c;
+    font-family: "simsun" Arial;
+}
+.tooltip .score {
+    position: absolute;
+    left: 16px; top: 25px;
+    width: 135px;
+    height: 25px;
+    overflow: hidden;
+    color: #f99a00;
+    font-size: 12px;
+    font-family: "simsun" Arial;
+    font-weight: bold;
+    line-height: 26px;
+    text-align: right;
+    background: url("../img/dark_star.gif") no-repeat left center;
+}
+.tooltip .score .mark {
+    position: absolute;
+    left: 0px; top: 0px;
+    width: 0px;
+    height: 25px;
+    overflow: hidden;
+    background: url("../img/star.gif") no-repeat left center;
+}
+.tooltip .dlcount {
+    position: absolute;
+    left: 16px;
+    top: 50px;
+    font-size: 12px;
+    color: #6b6b6b;
+    font-family: "simsun" Arial;
+    line-height: 26px;
+    padding-right: 10px;
+}
+.tooltip .size {
+    position: absolute;
+    left: 106px;
+    top: 50px;
+    font-size: 12px;
+    color: #6b6b6b;
+    font-family: "simsun" Arial;
+    line-height: 25px;
+}
+.tooltip .iconcount {
+    position: absolute;
+    left: 160px;
+    top: 50px;
+    font-size: 12px;
+    color: #6b6b6b;
+    font-family: "simsun" Arial;
+    line-height: 25px;
+    text-indent: 17px;
+    background: url("../img/icon.png") no-repeat left center;
+}
+.tooltip .des {
+    position: absolute;
+    left: 16px;
+    top: 75px;
+    font-size: 12px;
+    color: #6b6b6b;
+    font-family: "simsun" Arial;
+    line-height: 25px;
+}

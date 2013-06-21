@@ -1,4 +1,4 @@
-
+﻿
 dojo.declare('website.Final.Module', website.IModule, {
 
     // attr
@@ -39,6 +39,11 @@ dojo.declare('website.Final.Module', website.IModule, {
         //this.hotmore = dojo.byId('hotmore');
         this.adslist = dojo.byId('adsList');
         this.star = dojo.byId('star');
+        this.author = dojo.byId('author');
+        this.warning = dojo.byId('warning');
+        this.sourcebtn = dojo.byId('sourcebtn');
+        this.sourceList = dojo.byId('sourceList');
+
     },
     
    
@@ -70,9 +75,48 @@ dojo.declare('website.Final.Module', website.IModule, {
     out:function(){
         this.freeinstallbtn.className = 'freeinstallbtn';
     },
+    sourceover:function(){
+	
+	//setTimeout(function(){this.sourcebtn.className = 'sourcehover';},10);
+        this.sourcebtn.className = 'sourcehover';
+    },
+    sourceout:function(){
+	
+	//setTimeout(function(){this.sourcebtn.className = 'source';},10);
+        this.sourcebtn.className = 'source';
+    },
     adspingBack:function(){
         //@pingBack
         $PingBack('msite_final_ads_bv');
+    },
+    displaySource:function(event){
+
+        if(this.sourceflag==false){
+            return;
+        }
+        var target = event.target;
+        if(this.sourceList.style.display == 'block'){
+            this.sourceList.style.display = 'none';
+            this.sourcebtn.className='source';
+        }else{
+            this.sourceList.style.display = 'block';
+            this.sourcebtn.className='sourceup';
+        }
+        
+    },
+    sourceliover:function(event){
+	var target = event.target;
+
+	if(target.nodeName=='LI'){
+		target.className = 'sourcelihover';
+	 }
+	},
+    sourceliout:function(event){
+	var target = event.target;
+
+	if(target.nodeName=='LI'){
+		target.className = '';
+	 }
     },
     bindListener:function(){
 
@@ -85,7 +129,14 @@ dojo.declare('website.Final.Module', website.IModule, {
         dojo.connect(this.hotmore,"onclick",this,this.jumpMore);
         dojo.connect(this.freeinstallbtn,"mouseenter",this,this.over);
          dojo.connect(this.freeinstallbtn,"mouseleave",this,this.out);
+         dojo.connect(this.sourcebtn,"mouseenter",this,this.sourceover);
+         dojo.connect(this.sourcebtn,"mouseleave",this,this.sourceout);
+
+	
           dojo.connect(this.adsList,"click",this,this.adspingBack);
+           dojo.connect(this.sourcebtn,"onclick",this,this.displaySource);
+           dojo.connect(this.sourceList,"onclick",this,this.displaySource);
+            dojo.connect(this.sourceList,"onclick",this,this.eventhandle);
     /*    dojo.connect(this.installbtn,"onclick",this,this.downloadHandle);
         dojo.connect(this.category,"onclick",this,this.changePage);
          
@@ -138,13 +189,15 @@ dojo.declare('website.Final.Module', website.IModule, {
     eventhandle:function(event){
         
             //@pingBack
-                
-            $PingBack('_msite'+module.PAGE_ID+'_bs'+this.appId); 
+              
+        $PingBack('_msite'+module.PAGE_ID+'_bs'+this.appId); 
         var target = event.target;
+        
         if(target.getAttribute('state')=="disabled"){
             return
         }
-        var url = "http://zhushou.sogou.com/data/download.html?Os_type=Android&appid=@";
+        var url =target.url?target.url:"http://zhushou.sogou.com/data/download.html?Os_type=Android&appid=@";
+        
         url = window.decodeURIComponent(url);
         var taskid = this.taskId();
         var appid = this.finalData.final.detail.appid;
@@ -235,8 +288,11 @@ dojo.declare('website.Final.Module', website.IModule, {
         this.bigicon.original = data.icon_l? data.icon_l:data.icon;
         this.name.innerHTML = data.name.substring(0,10);
         this.downloadCount.innerHTML = '下载次数：'+data.downloadCount+'次';
+       
+        this.warning.innerHTML = '<a href="http://zhushou.sogou.com/report.html?appid='+this.appId+'" target="_blank" hidefocus="true">举报</a>';
+        
         this.size.innerHTML = '大小：'+data.size;
-        this.updatetime.innerHTML = '更新时间：'+ new Date(parseInt(data.modifiedtime*1000)).toLocaleString().replace(/:\d{1,2}$/,' ').split(' ')[0];
+        this.updatetime.innerHTML = '更新：'+ new Date(parseInt(data.modifiedtime*1000)).toLocaleString().replace(/:\d{1,2}$/,' ').split(' ')[0];
         
         this.version.innerHTML = '版本：'+window.decodeURIComponent(data.version);
         if(data.langid==1){
@@ -248,7 +304,11 @@ dojo.declare('website.Final.Module', website.IModule, {
         }
         
         this.system.innerHTML = '平台：'+window.decodeURIComponent(data.platform);
-       
+        
+        if(data.author!==undefined){
+            this.author.innerHTML = '作者：'+window.decodeURIComponent(data.author);
+        }
+        
         if(this.categoryType=='app'){
             this.currentTab.innerHTML = '应用概况';
             this.gameintro.innerHTML = '★应用简介：<br>'+data.description;
@@ -288,6 +348,25 @@ dojo.declare('website.Final.Module', website.IModule, {
              dojo.byId('markword').innerHTML = '力荐啦~\(≧▽≦)/~';
 
         }
+        
+        //data.source = [{'text':'应用汇','url':'www.baidu.com'},{'text':'应用汇','url':'www.baidu.com'},{'text':'应用汇','url':'www.baidu.com'}];
+        if(data.source==undefined||data.source==[]){
+            
+            this.sourceflag=false;
+            
+        }else{
+            var sourcestr='';
+            for(i=0;i<data.source.length;i++){
+             sourcestr += '<li url="'+data.source[i].url+'">来源：'+data.source[i].text+'</li>';
+            }
+            this.sourceList.innerHTML = '<ul>'+sourcestr+'</ul>';
+            for(i=0;i<this.sourceList.childNodes[0].childNodes.length;i++){
+                dojo.connect(this.sourceList.childNodes[0].childNodes[i],"mouseenter",this,this.sourceliover);
+                dojo.connect(this.sourceList.childNodes[0].childNodes[i],"mouseleave",this,this.sourceliout);
+            }
+
+        }
+        
     },
     setImgData:function(){
 

@@ -7,36 +7,58 @@
     var indexArr = ['c0', 'c1', 'c2', 'c3', 'c4', 'c5', 'c6'];
 
     dojo.declare('website.Portal.Tab', [website.IComponent], {
-        // attr
+        // 属性
         config: null,
         parentControl: null,
         template: null,
         hasData: false,
-        // dom
+        useTip: false,
+        _handlers: null,
+        // 元素
         moredom: null,
-        // component
+        // 组件
         tab: null,
+        tooltip: null,
 
+        /**
+         * 构造方法
+         * @param configObject
+         */
         constructor: function (configObject) {
             this.config = configObject;
             this.container = configObject.container;
-            this.parentControl = this.config.parent;
+            this.parentControl = configObject.parent;
             this.moredom = dojo.query('span.more', this.container)[0];
             this.template = YayaTemplate(dojo.byId(configObject.tmplId).innerHTML);
             this.resolveTriggers();
+            this._handlers = [];
+            if (configObject.useTip) {
+                this.tooltip = this.parentControl.tooltip;
+            }
+
+            dojo.connect(window, 'onbeforeunload', this, this.dispose);
         },
 
+        /**
+         * 可切换的功能可用
+         */
         init: function () {
             if (this.hasData)
                 this.start();
         },
 
+        /**
+         * 初始化tab组件
+         */
         start: function () {
             if (!this.tab) {
                 this.tab = new Sogou.ui.Tab(this.config);
             }
         },
 
+        /**
+         * 根据所处模块不同, 动态生成切换标签
+         */
         resolveTriggers: function () {
             var frag = document.createDocumentFragment();
             var li;
@@ -54,12 +76,16 @@
             dojo.query('ul.triggers', this.container)[0].appendChild(frag);
         },
 
+        /**
+         * 设置数据源
+         * @param json
+         */
         setData: function (json) {
             var panelsContainer = dojo.query('div.panels', this.container)[0],
                 ul, i = 0;
+            if (!json) return;
 
-            if (!json)
-                return;
+            this.dispose();
 
             var html, me = this;
 
@@ -96,57 +122,69 @@
             }, 10);
         },
 
+        /**
+         * 绑定数据后绑定事件
+         */
         bind: function () {
+            var me = this;
+
             dojo.forEach(this.config.panels, function (panel) {
-                dojo.query('li', panel)
-                .onmouseenter(function(e){
+                dojo.query('li', panel).onmouseenter(function(e){
                     dojo.addClass(e.target, 'hover');
-                })
-                .onmouseleave(function(e){
+                    me.tooltip && me.tooltip.setData(e.target).show();
+                }).onmouseleave(function(e){
                     dojo.removeClass(e.target, 'hover');
-                })
-                .forEach(function (li) {
+                    me.tooltip && me.tooltip.hide();
+                }).forEach(function (li) {
                     var btn = dojo.query('span.installbtn', li)[0];
-                    dojo.connect(btn, 'mouseenter', this, function (evt) {
-                        if (/disable/.test(btn.className))
-                            return;
+                    me._handlers.push(dojo.connect(btn, 'mouseenter', function () {
+                        if (/disable/.test(btn.className)) return;
                         dojo.addClass(btn, 'installbtnhover');
-                    });
-                    dojo.connect(btn, 'mouseleave', this, function (evt) {
-                        if (/disable/.test(btn.className))
-                            return;
+                    }));
+                    me._handlers.push(dojo.connect(btn, 'mouseleave', function () {
+                        if (/disable/.test(btn.className)) return;
                         dojo.removeClass(btn, 'installbtnhover installbtnpress');
-                    });
-                    dojo.connect(btn, 'mousedown', this, function (evt) {
-                        if (/disable/.test(btn.className))
-                            return;
+                    }));
+                    me._handlers.push(dojo.connect(btn, 'mousedown', function () {
+                        if (/disable/.test(btn.className)) return;
                         dojo.addClass(btn, 'installbtnpress');
-                    });
-                    dojo.connect(btn, 'mouseup', this, function (evt) {
-                        if (/disable/.test(btn.className))
-                            return;
+                    }));
+                    me._handlers.push(dojo.connect(btn, 'mouseup', function () {
+                        if (/disable/.test(btn.className)) return;
                         dojo.removeClass(btn, 'installbtnpress');
-                    });
-                    dojo.connect(btn, 'click', this, website.EventManager.on);
-
-                }, this);
-            }, this);
-
-            dojo.connect(this.moredom, 'mouseover', this, function (evt) {
-                dojo.addClass(this.moredom, 'hover');
+                    }));
+                    me._handlers.push(dojo.connect(btn, 'click', me, website.EventManager.on));
+                });
             });
-            dojo.connect(this.moredom, 'mouseout', this, function (evt) {
-                dojo.removeClass(this.moredom, 'hover press');
-            });
-            dojo.connect(this.moredom, 'mousedown', this, function(evt) {
+
+            me._handlers.push(dojo.connect(me.moredom, 'mouseover', function (evt) {
+                dojo.addClass(me.moredom, 'hover');
+            }));
+            me._handlers.push(dojo.connect(me.moredom, 'mouseout', function (evt) {
+                dojo.removeClass(me.moredom, 'hover press');
+            }));
+            me._handlers.push(dojo.connect(me.moredom, 'mousedown', function(evt) {
                 dojo.addClass(evt.target, 'press');
-            });
-            dojo.connect(this.moredom, 'mouseup', this, function(evt) {
+            }));
+            me._handlers.push(dojo.connect(me.moredom, 'mouseup', function(evt) {
                 dojo.removeClass(evt.target, 'press');
-            });
-            dojo.connect(this.moredom, 'click', this, function(){
+            }));
+            me._handlers.push(dojo.connect(me.moredom, 'click', function(){
                 window.location = 'Category.html#' + this.parentControl.type;
+            }));
+        },
+
+        /**
+         * @implements IDispose
+         */
+        disposeInternal_: function () {
+            if (this.tab && this.tab.dispose) {
+                this.tab.dispose();
+            }
+            dojo.forEach(this._handlers, function (handle) {
+                dojo.disconnect(handle);
             });
+            this._handlers = [];
         }
 
     });

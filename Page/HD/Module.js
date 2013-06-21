@@ -3,23 +3,22 @@
  * @creator Leo
  */
 
-(function () {
+(function (global, undefined) {
 
     var location = window.location;
     var LinkerChar = '_';
     var BASEPATH = 'website_hd_';
     var TYPE = location.hash.split('/')[0].replace('#', '') || 'game';
+    var URL = "http://zhushou.sogou.com/data/data.html?Os_type=Android&data=@";
 
     dojo.declare('website.HD.Module', [website.IModule], {
-        // attr
+        // 属性
         type:   null,
         category: null,
         lang:   null,
         sort: null,
         pageIndex: null,
         footer: dojo.query('div.footer')[0],
-
-        // com
         loader: null,
         storePath: null,
 
@@ -55,18 +54,75 @@
         systemID:       9,
         PAGE_ID:        'hd',
 
-        // components
+        // 组件
         navigator:      null,
         pager:          null,
         botAds:         null,
 
+        /**
+         * 构造方法
+         */
         constructor: function () {
-            // this.getPDAInfor();
             this.resolveHash();
             this.resolvePath();
-
             this.IDS.pager = this.storePath;
-            // adjust post json data
+            this.initializeComponents();
+
+            var me = this;
+            dojo.subscribe('/dojo/hashchange', function(hash) {
+                me.resolveHash();
+                me.resolvePath();
+                me.IDS.pager = me.storePath;
+                // 发送请求
+                var o, json;
+                // 生成请求json
+                o = {data:{}};
+                o.data[me.storePath] = {
+                    module: 'applist',
+                    type: 'category',
+                    category_group: (me.type === 'game' ? '1014' : '1002'),
+                    sort: me.sort,
+                    langid: me.lang,
+                    hd: 1,
+                    start: (me.pageIndex-1) * 36,
+                    limit: 36,
+                    order: 'down'
+                };
+                if (me.category !== 'all') {
+                    o.data[me.storePath]['categoryid'] = me.category;
+                }
+                o.returnFormat = 'jsonp';
+                json = JSON.stringify(o);
+
+                dojo.io.script.get({
+                    url: URL.replace('@', json),
+                    callbackParamName: 'callback'
+                }).then(function(data){
+                    if (!data) {
+                        if(me.errorCallback && (typeof me.errorCallback === 'function'))
+                            me.errorCallback();
+                        return;
+                    }
+
+                    var serialization;
+                    try {
+                        serialization = JSON.parse(data);
+                    } catch(e) {
+                        throw new Error("request HomePage data from server format error");
+                    }
+                    me.setData(serialization);
+                });
+                //window.external.GetWebsiteAPPInfo_Async(json, 'jsonCallback', document);
+            });
+        },
+
+        /**
+         * 生成http请求的json数据格式
+         * @override
+         * @return {json}
+         */
+        generatePostJson: function () {
+            // 修正要请求的数据
             this.postData.data[this.type][this.storePath] = {
                 module: 'applist',
                 type: 'category',
@@ -82,63 +138,11 @@
                 this.postData.data[this.type][this.storePath]['categoryid'] = this.category;
             }
 
-            var self = this;
-            // cross domain ajax request callback
-            window.jsonCallback = function (data) {
-                if (!data) {
-                    if (self.errorCallback && (typeof self.errorCallback === 'function'))
-                        self.errorCallback();
-                    return;
-                }
-
-                var serialization;
-                try {
-                    serialization = JSON.parse(data);
-                } catch (e) {
-                    throw new Error("request HomePage data from server format error");
-                }
-                self.setData(serialization);
-            };
-
-            this.initializeComponents();
-
-            dojo.subscribe('/dojo/hashchange', function(hash) {
-                self.resolveHash();
-                self.resolvePath();
-                self.IDS.pager = self.storePath;
-                // 发送请求
-                var data = LocalStorage.read(self.IDS.pager),
-                    o, json;
-                if (data) {
-                    self.pager.setData(JSON.parse(data));
-                    if (self.loader) {
-                        self.loader.destroy();
-                    }
-                    self.loader = self.createImgLoader();
-                } else {
-                    // 生成请求json
-                    o = {data:{}};
-                    o.data[self.storePath] = {
-                        module: 'applist',
-                        type: 'category',
-                        category_group: (self.type === 'game' ? '1014' : '1002'),
-                        sort: self.sort,
-                        langid: self.lang,
-                        hd: 1,
-                        start: (self.pageIndex-1) * 36,
-                        limit: 36,
-                        order: 'down'
-                    };
-                    if (self.category !== 'all') {
-                        o.data[self.storePath]['categoryid'] = self.category;
-                    }
-                    json = JSON.stringify(o);
-                    window.external.GetWebsiteAPPInfo_Async(json, 'jsonCallback', document);
-                }
-            });
+            return this.inherited(arguments);
         },
+
         /**
-         * initialize included components
+         * 初始化页面组件
          */
         initializeComponents: function () {
             this.navigator = new website.HD.Navigator({
@@ -153,6 +157,7 @@
             });
             this.botAds = dojo.query('.bottomads')[0];
         },
+
         /**
          * 根据hash取得各种排序属性
          */
@@ -182,34 +187,26 @@
         },
 
         /**
-         * Data from server side fills in page components
-         * @param data
+         * 设置页面组件数据源
+         * @param {object} data
          */
         setData: function (data) {
             if (!data)
                 return;
 
-            var me = this;
-            var useNavagator = false,
-                usePager = false,
-                useBotAds = false;
-
             // navigator
             if (data[this.IDS.navigator]) {
                 this.navigator.setData(data[this.IDS.navigator]);
-                useNavagator = true;
             }
             // pager
             if (data[this.IDS.pager]) {
                 this.pager.setData(data[this.IDS.pager]);
-                usePager = true;
             }
             // bottom ads
             if (data[this.IDS.botAds] && data[this.IDS.botAds].html) {
                 var str = decodeURIComponent(data[this.IDS.botAds].html);
                 this.botAds.innerHTML = str;
                 this.botAds.style.visibility = 'visible';
-                useBotAds = true;
             }
 
             this.footer.style.display = 'block';
@@ -219,72 +216,26 @@
                 this.loader.destroy();
             }
             this.loader = this.createImgLoader();
-
-            setTimeout(function() {
-                var lc = LocalStorage,
-                    str = JSON.stringify;
-
-                useNavagator && lc.write(me.IDS.navigator, str(data[me.IDS.navigator]));
-                usePager && lc.write(me.IDS.pager, str(data[me.IDS.pager]));
-                useBotAds && lc.write(me.IDS.botAds, str(data[me.IDS.botAds]));
-
-            }, 100);
         },
 
         /**
-         *  First time load page to check whether there
-         *  has data in localStorage
+         *  发起页面数据请求
          */
         getData: function () {
-            var data,
-                i = 0;
-            // navigator
-            data = LocalStorage.read(this.IDS.navigator);
-            if (data) {
-                this.navigator.setData(JSON.parse(data));
-                delete this.postData['data'][this.type][this.IDS.navigator];
-                ++i;
-            }
-            // pager
-            data = LocalStorage.read(this.IDS.pager);
-            if (data) {
-                this.pager.setData(JSON.parse(data));
-                delete this.postData['data'][this.type][this.IDS.pager];
-                ++i;
-            }
-            // bottom ads
-            data = LocalStorage.read(this.IDS.botAds);
-            if (data) {
-                this.botAds.innerHTML = decodeURIComponent(JSON.parse(data).html);
-                this.botAds.style.visibility = 'visible';
-                delete this.postData['data'][this.type][this.IDS.botAds];
-                ++i;
-            }
-
-            if (i === 3) {
-                this.footer.style.display = 'block';
-
-                if (this.loader) {
-                    this.loader.destroy();
-                }
-                this.loader = this.createImgLoader();
-            } else {
-                this.sendRequest();
-            }
+            this.sendRequest();
         },
 
         /**
-         * set up module app
+         * 启动页面逻辑
          */
         setup: function () {
             this.getData();
-            //@PingBack
-            $PingBack('msite_' + this.type + '_hd_bv');
+            // @PingBack
+            // $PingBack('msite_' + this.type + '_hd_bv');
         }
-
     });
-})();
 
-var module;
-module = new website.HD.Module(this);
-module.setup();
+    var module;
+    module = new website.HD.Module();
+    module.setup();
+})(this);

@@ -18,6 +18,11 @@
                 new Sogou.mod.Effects()
             ];
             this.switchable = new Sogou.mod.Switchable(this.config);
+        },
+
+        dispose: function () {
+            if (this.switchable && this.switchable.dispose)
+                this.switchable.dispose();
         }
     });
 

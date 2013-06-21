@@ -1,162 +1,138 @@
+/**
+ * @description module logic for Required tab
+ * @creator Leo
+ */
 (function (global, undefined) {
 
-    var span = 4;
-
     dojo.declare('website.Required.Tab', [website.IComponent], {
-        // attr
-        sort: null,
-        parent: null,
+        // 属性
+        parentControl: null,
         template: null,
-        currentIndex: 0,
-        path: null,
-        // dom
-        triggers: null,
-        panels: null,
-        panelsContainer: null,
+        _handlers: null,
+        // 元素
+        sorter: null,
+        panel: null,
+        currentSort: null,
 
+        /**
+         * 构造方法
+         * @param configObject
+         */
         constructor: function (configObject) {
-            var self = this;
-
             this.container = configObject.container;
             this.parentControl = configObject.parent;
-            this.sort = this.parentControl.sort;
             this.template = YayaTemplate(dojo.byId(configObject.tmplId).innerHTML);
-            this.triggers = dojo.query('ul li', this.container);
-            this.panelsContainer = dojo.query('div.panels', this.container)[0];
-            this.path = 'website_required_app_' + this.sort;
+            var query = dojo.query('ul', this.container);
+            this.sorter = query[0];
+            this.panel = query[1];
+            this._handlers = [];
 
-            this.shimPanels();
-            this.panels = dojo.query('ul', this.panelsContainer);
+            // 只绑定必要事件
             this.bind();
-            dojo.addClass(dojo.query('li[sortid=' + this.sort + ']')[0], 'selected');
-
-            global.tabCallback = function (data) {
-                if (!data) {
-                    if (self.errorCallback && (typeof self.errorCallback === 'function'))
-                        self.errorCallback();
-                    return;
-                }
-
-                var serialization;
-                try {
-                    serialization = JSON.parse(data)[self.path];
-                } catch (e) {
-                    throw new Error("request HomePage data from server format error");
-                }
-                self.setData(serialization);
-            };
+            dojo.connect(window, 'onbeforeunload', this, this.dispose);
         },
 
-        shimPanels: function () {
-            // 补充除第一个外后面的面板
-            var frag = document.createDocumentFragment();
-            var ul,len = dojo.query('ul.triggers li', this.container).length;
-            for (var i = 0; i < len - 1; ++i) {
-                ul = dojo.create('ul', {
-                    className: 'panel'
-                });
-                ul.style.display = 'none';
-                frag.appendChild(ul);
-            }
-            this.panelsContainer.appendChild(frag);
-        },
-
-        setData: function (json) {
-            var ul = this.panels[this.currentIndex];
-            if (!json)
-                return;
-
-            if (ul.getAttribute('hasData') !== 'true') {
-                ul.innerHTML = this.template.render(json);
-                dojo.query('li', ul).onmouseenter(function (e) {
-                    dojo.addClass(e.target, 'hover');
-                }).onmouseleave(function (e) {
-                    dojo.removeClass(e.target, 'hover');
-                }).forEach(function (li) {
-                    var btn = dojo.query('span.installbtn', li)[0];
-                    dojo.connect(btn, 'mouseenter', this, function (e) {
-                        if (/disable/.test(btn.className))
-                            return;
-                        dojo.addClass(btn, 'installbtnhover')
-                    });
-                    dojo.connect(btn, 'mouseleave', this, function (e) {
-                        if (/disable/.test(btn.className))
-                            return;
-                        dojo.removeClass(btn, 'installbtnhover installbtnpress')
-                    });
-                    dojo.connect(btn, 'mousedown', this, function (e) {
-                        if (/disable/.test(btn.className))
-                            return;
-                        dojo.addClass(btn, 'installbtnpress')
-                    });
-                    dojo.connect(btn, 'mouseup', this, function (e) {
-                        if (/disable/.test(btn.className))
-                            return;
-                        dojo.removeClass(btn, 'installbtnpress')
-                    });
-                    dojo.connect(btn, 'click', this, website.EventManager.on);
-                }, this);
-
-                if (this.parentControl.loader) {
-                    this.parentControl.loader.destroy();
-                }
-                this.parentControl.loader = this.parentControl.createImgLoader();
-                this.show();
-
-                ul.setAttribute('hasData', 'true');
-                LocalStorage.write(this.path, JSON.stringify(json));
-            }
-        },
-
+        /**
+         * 绑定必要事件
+         */
         bind: function () {
             // 切换tab
-            this.triggers.forEach(function(li, index) {
-                dojo.connect(li, 'click', this, function (e) {
-                    var sorter = li.getAttribute('sortid');
-                    // trigger切换样式
-                    dojo.removeClass(dojo.query('li[sortid=' + this.sort + ']')[0], 'selected');
-                    dojo.addClass(li, 'selected');
-                    // panels切换样式
-                    dojo.style(this.panels[this.currentIndex], 'display', 'none');
-                    this.currentIndex = index;
-                    dojo.style(this.panels[this.currentIndex], 'display', 'block');
-
-                    this.parentControl.sort = this.sort = sorter;
-                    window.location.hash = sorter;
-
-                    if (li.getAttribute('hasData') !== 'true') {
-                        this.sendRequest();
-                    }
-                });
-            }, this);
+            dojo.connect(this.sorter, 'click', this, function (e) {
+                var target = e.target;
+                if (target.nodeName === 'LI') {
+                    var sorter = target.getAttribute('sortid');
+                    var shim = [sorter];
+                    dojo.hash(shim.join('/'));
+                }
+            });
         },
 
-        sendRequest: function () {
-            // tab
-            this.path = 'website_required_app_' + this.sort;
-            var data = LocalStorage.read(this.path);
-            if (data) {
-                this.setData(JSON.parse(data));
-            } else {
-                var json = this.generatePostJson();
-                window.external.GetWebsiteAPPInfo_Async(json, 'tabCallback', document);
+        /**
+         * 绑定数据后绑定事件
+         */
+        bindPanel: function () {
+            var me = this;
+            // 面板的鼠标响应
+            dojo.query('li', this.panel).onmouseenter(function (e) {
+                dojo.addClass(e.target, 'hover');
+            }).onmouseleave(function (e) {
+                dojo.removeClass(e.target, 'hover');
+            }).forEach(function (li) {
+                var btn = dojo.query('span.installbtn', li)[0];
+                me._handlers.push(dojo.connect(btn, 'mouseenter', function () {
+                    if (/disable/.test(btn.className)) return;
+                    dojo.addClass(btn, 'installbtnhover');
+                }));
+                me._handlers.push(dojo.connect(btn, 'mouseleave', function () {
+                    if (/disable/.test(btn.className)) return;
+                    dojo.removeClass(btn, 'installbtnhover installbtnpress');
+                }));
+                me._handlers.push(dojo.connect(btn, 'mousedown', function () {
+                    if (/disable/.test(btn.className)) return;
+                    dojo.addClass(btn, 'installbtnpress');
+                }));
+                me._handlers.push(dojo.connect(btn, 'mouseup', function () {
+                    if (/disable/.test(btn.className)) return;
+                    dojo.removeClass(btn, 'installbtnpress');
+                }));
+                me._handlers.push(dojo.connect(btn, 'click', me, website.EventManager.on));
+            });
+        },
+
+        /**
+         * @implements IDispose
+         */
+        dispose: function () {
+            this.disposeInternal_();
+        },
+
+        /**
+         * @implements IDispose
+         */
+        disposeInternal_: function () {
+            dojo.forEach(this._handlers, function (handle) {
+                dojo.disconnect(handle);
+            });
+            this._handlers = [];
+        },
+
+        /**
+         * 设置数据源
+         * @param json
+         */
+        setData: function (json) {
+            if (!json || json.totalCount == 0) {
+                this.dispose();
+                dojo.empty(this.panel);
+                this.show();
+                this.setFocus();
+                return;
             }
+
+            this.dispose();
+            var html = this.template.render(json);
+            this.panel.innerHTML = html;
+
+            this.show();
+            this.setFocus();
+            this.bindPanel();
         },
 
-        generatePostJson: function () {
-            var sort = this.sort;
-            var o = { data: {}};
-            o.data[this.path] = {
-                module: 'applist',
-                type: 'normal',
-                sort: 'download',
-                categoryid: sort,
-                category_group: '1002',
-                start: 0,
-                limit: 54,
-                order: 'down'
-            };
-            return JSON.stringify(o);
+        /**
+         * @override IPager
+         */
+        setFocus: function () {
+            var sort = this.parentControl.category,
+                currentSort = dojo.query('li[sortid=' + sort + ']', this.sorter)[0];
+
+            if (!this.currentSort) {
+                this.currentSort = dojo.query('li[sortid=' + sort + ']', this.sorter)[0];
+                dojo.addClass(this.currentSort, 'selected');
+            } else if (this.currentSort !== currentSort) {
+                dojo.removeClass(this.currentSort, 'selected');
+                this.currentSort = currentSort;
+                dojo.addClass(this.currentSort, 'selected');
+            }
         }
 
     });

@@ -21,7 +21,7 @@ dojo.declare('website.IDispose', null, {
         this.disposeInternal_();
     },
     /**
-     * @private
+     * @protected
      */
     disposeInternal_: function () {
         if (!this.dispose_) {

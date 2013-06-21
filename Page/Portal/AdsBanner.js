@@ -1,41 +1,71 @@
-dojo.declare('website.Portal.AdsBanner', [website.IComponent], {
+/**
+ * 底部相框推荐位
+ */
+(function(global, undefined){
+    dojo.declare('website.Portal.AdsBanner', [website.IComponent], {
+        // 属性
+        parentControl: null,
+        template: null,
+        content: null,
+        _handlers: null,
 
-    parentControl: null,
-    template: null,
-    content: null,
+        /**
+         * 构造方法
+         * @param configObject
+         */
+        constructor: function (configObject) {
+            this.parentControl = configObject.parent;
+            this.container = configObject.container;
+            this.content = dojo.query('ul', this.container)[0];
+            this.template = YayaTemplate(dojo.byId(configObject.tmplId).innerHTML);
+            this._handlers = [];
 
-    constructor: function (configObject) {
-        this.parentControl = configObject.parent;
-        this.container = configObject.container;
-        this.content = dojo.query('ul', this.container)[0];
-        this.template = YayaTemplate(dojo.byId(configObject.tmplId).innerHTML);
-    },
+            dojo.connect(window, 'onbeforeunload', this, this.dispose);
+        },
 
-    bind: function () {
-        var lis = dojo.query('li.frame', this.container);
-        lis.onmouseenter(function(evt){
-            dojo.addClass(evt.target, 'frameHover');
-
-        }).onmouseleave(function(evt){
-            dojo.removeClass(evt.target, 'frameHover');
-        });
-        lis.forEach(function(li){
-            dojo.connect(li, 'click', function(){
-                window.location = 'final.html?appid=' + li.getAttribute('appid');
+        /**
+         * 绑定数据后绑定事件
+         */
+        bind: function () {
+            var lis = dojo.query('li.frame', this.container),
+                me = this;
+            dojo.forEach(lis, function(li){
+                me._handlers.push(dojo.connect(li, 'mouseenter', function(evt){
+                    dojo.addClass(li, 'frameHover');
+                }));
+                me._handlers.push(dojo.connect(li, 'mouseleave', function(evt){
+                    dojo.removeClass(li, 'frameHover');
+                }));
+                me._handlers.push(dojo.connect(li, 'click', function(){
+                    window.location = 'final.html?appid=' + li.getAttribute('appid');
+                }));
             });
-        });
-    },
+        },
 
-    setData: function (json) {
-        if (!json || !json.list)
-            return;
+        /**
+         * 设置数据源
+         * @param json
+         */
+        setData: function (json) {
+            if (!json || !json.list) return;
 
-        var html = this.template.render(json);
-        this.content.innerHTML = html;
-        this.data = html;
-        this.bind();
-        this.show();
-        return html;
-    }
+            this.dispose();
+            var html = this.template.render(json);
+            this.content.innerHTML = html;
+            this.bind();
+            this.show();
+            return html;
+        },
 
-});
+        /**
+         * @implements IDispose
+         */
+        disposeInternal_: function () {
+            dojo.forEach(this._handlers, function (handle) {
+                dojo.disconnect(handle);
+            });
+            this._handlers = [];
+        }
+
+    });
+})(this);

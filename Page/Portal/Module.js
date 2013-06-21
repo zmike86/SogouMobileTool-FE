@@ -2,32 +2,24 @@
  * @description module logic for portal page
  * @creator Leo
  */
-(function () {
+(function (global, undefined) {
 
     var location = window.location;
     var BASEPATH = 'website_portal_';
     var TYPE = location.search.replace('?type=', '') || 'game';
 
     dojo.declare('website.Portal.Module', [website.IModule], {
-        // attr
+        // 属性
         type: TYPE,
         IDS: {
-            slide: BASEPATH + TYPE + '_slide',
-            topAds: BASEPATH + TYPE + '_topAds',
+            slide: BASEPATH + TYPE + '_slide',topAds: BASEPATH + TYPE + '_topAds',
             tabPanel: BASEPATH + TYPE + '_tabPanel',
-            tabc0: BASEPATH + TYPE + '_c0',
-            tabc1: BASEPATH + TYPE + '_c1',
-            tabc2: BASEPATH + TYPE + '_c2',
-            tabc3: BASEPATH + TYPE + '_c3',
-            tabc4: BASEPATH + TYPE + '_c4',
-            tabc5: BASEPATH + TYPE + '_c5',
-            tabc6: BASEPATH + TYPE + '_c6',
-            downloadRank: BASEPATH + TYPE + '_downloadRank',
+            tabc0: BASEPATH + TYPE + '_c0',tabc1: BASEPATH + TYPE + '_c1',tabc2: BASEPATH + TYPE + '_c2',
+            tabc3: BASEPATH + TYPE + '_c3',tabc4: BASEPATH + TYPE + '_c4',tabc5: BASEPATH + TYPE + '_c5',
+            tabc6: BASEPATH + TYPE + '_c6',downloadRank: BASEPATH + TYPE + '_downloadRank',
             midAds: BASEPATH + TYPE + '_midAds',
-            onsalePanel: BASEPATH + TYPE + '_onsalePanel',
-            raiseRank: BASEPATH + TYPE + '_raiseRank',
-            botAds: BASEPATH + TYPE + '_botAds',
-            comAds: BASEPATH + TYPE + '_comAds'
+            onsalePanel: BASEPATH + TYPE + '_onsalePanel',raiseRank: BASEPATH + TYPE + '_raiseRank',
+            botAds: BASEPATH + TYPE + '_botAds',comAds: BASEPATH + TYPE + '_comAds'
         },
         postData: {
             data: {
@@ -221,9 +213,10 @@
         },
         systemID: 9,
         PAGE_ID:  'portal',
+        loader: null,
         footer: dojo.query('div.footer')[0],
 
-        // components
+        // 组件
         slide:          null,
         topAds:         null,
         tabPanel:       null,
@@ -233,45 +226,21 @@
         raiseRank:      null,
         botAds:         null,
         comAds:         null,
+        tooltip:        null,
 
+        /**
+         * 构造方法
+         */
         constructor: function () {
-            //this.getPDAInfor();
-            var self = this;
-            // cross domain ajax request callback
-            window.jsonCallback = function (data) {
-                if (!data) {
-                    if(self.errorCallback && (typeof self.errorCallback === 'function'))
-                        self.errorCallback();
-                    return;
-                }
-
-                var serialization;
-                try {
-                    serialization = JSON.parse(data);
-                } catch(e) {
-                    throw new Error("request HomePage data from server format error");
-                }
-                self.setData(serialization);
-                /*var log = "网络传输间隔至回调： " + (t2.getTime() - t1.getTime()) +
-                    "\n  解析返回数据： " + (t3.getTime() - t2.getTime()) +
-                    "\n  设置页面组件数据源总时间： " + (t4.getTime() - t3.getTime());
-                +
-                    "\n  slide and topads： " + (t6.getTime() - t5.getTime()) +
-                    "\n  tab setData and init： " + (t8.getTime() - t6.getTime())+
-                    "\n  downloadrank： " + (t9.getTime() - t8.getTime())+
-                    "\n  midads： " + (t10.getTime() - t9.getTime())+
-                    "\n  onsalepanel： " + (t11.getTime() - t10.getTime()) +
-                    "\n  raiserank： " + (t12.getTime() - t11.getTime())+
-                    "\n  botads： " + (t13.getTime() - t12.getTime()) +
-                    "\n  create loader： " + (t4.getTime() - t13.getTime());
-                window.external.WriteLog(log);*/
-            };
+            // 初始化页面组件
             this.initializeComponents();
         },
+
         /**
-         * initialize included components
+         * 初始化页面组件
          */
         initializeComponents: function () {
+            this.tooltip = new website.Tooltip();
             this.slide = new website.Portal.Slide({
                 parent: this,
                 container: dojo.byId('slideContainer'),
@@ -292,7 +261,8 @@
                 activeClassName: 'selected',
                 triggerType: 'click',
                 effect: 'none',
-                viewSize: []
+                viewSize: [],
+                useTip: true
             });
             this.downloadRank = new website.Portal.Rank({
                 parent: this,
@@ -308,8 +278,10 @@
             this.onsalePanel = new website.Portal.Panel({
                 parent: this,
                 container: dojo.byId('onsalePanel'),
-                tmplId: 'panel_tmpl'
+                tmplId: 'panel_tmpl',
+                useTip: true
             });
+            alert(3)
             this.raiseRank = new website.Portal.HtmlRank({
                 parent: this,
                 container: dojo.byId('raiseupRank'),
@@ -326,14 +298,13 @@
                 container: dojo.query('div.commonAds')[0]
             });
         },
+
         /**
-         * Data from server side fills in page components
-         * @param data
+         * 设置页面组件数据源
+         * @param {object} data
          */
         setData: function (data) {
-            if (!data)
-                return;
-
+            if (!data) return;
             var aggregate;
             // slide
             if (data[this.IDS.slide]) {
@@ -385,28 +356,30 @@
             this.footer.style.display = 'block';
             // 放在这里才是网页上面所有的img元素都被渲染出来的时机
             // 所以ImageLoader在页面的生命周期中应该在此刻初始化
-            this.createImgLoader();
+            this.loader = this.createImgLoader();
             //this.createScrollbar();
         },
+
         /**
-         *  First time load page to check whether there
-         *  has data in localStorage
+         *  发起页面数据请求
          */
         getData: function () {
             this.sendRequest();
         },
+
         /**
-         * set up module app
+         * 启动页面逻辑
          */
         setup: function () {
             this.getData();
-            //@PingBack
-            $PingBack('msite_' + this.type + '_portal_bv');
+            // @PingBack
+            // $PingBack('msite_' + this.type + '_portal_bv');
         }
 
     });
-})();
 
-var module;
-module = new website.Portal.Module(this);
-module.setup();
+    var module;
+    module = new website.Portal.Module();
+    module.setup();
+
+})(this);

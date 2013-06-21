@@ -2,24 +2,27 @@
  * @description {string} module logic for Required page
  * @creator {*} Leo
  */
-
-(function () {
+(function (global, undefined) {
 
     var location = window.location;
     var LinkerChar = '_';
     var BASEPATH = 'website_required_';
     var TYPE = 'app';
-    var SORT = location.hash.replace('#', '') || '1045';
+    var URL = "http://zhushou.sogou.com/data/data.html?Os_type=Android&data=@";
 
     // Store for pager's localStorage path
     var PATH = '';
 
     dojo.declare('website.Required.Module', [website.IModule], {
-        // attr
-        type:   'app',
-        sort:   SORT,
+        // 属性
+        type:       'app',
+        category:   null,
+        loader:     null,
+        storePath:  null,
+        footer: dojo.query('div.footer')[0],
 
         IDS: {
+            tab: '',
             botAds: BASEPATH + TYPE + '_botAds',
             comAds: BASEPATH + TYPE + '_comAds'
         },
@@ -39,51 +42,87 @@
         },
         systemID:       9,
         PAGE_ID:        'required',
-        footer: dojo.query('div.footer')[0],
 
-        // components
+        // 组件
         tab:            null,
         botAds:         null,
         comAds:         null,
 
+        /**
+         * 构造方法
+         */
         constructor: function () {
-            // this.getPDAInfor();
-            this.type = TYPE;
-            this.sort = SORT;
+            this.resolveHash();
+            this.resolvePath();
+            this.IDS.tab = this.storePath;
+            this.initializeComponents();
 
-            PATH = BASEPATH + this.type + LinkerChar + this.sort;
-            this.IDS.tab = PATH;
-            this.postData.data[this.type][PATH] = {
+            var me = this;
+            dojo.subscribe('/dojo/hashchange', function(hash) {
+                me.resolveHash();
+                me.resolvePath();
+                me.IDS.tab = me.storePath;
+                // 发送请求
+                var o, json;
+                // 生成请求json
+                o = {data:{}};
+                o.data[me.storePath] = {
+                    module: 'applist',
+                    type: 'normal',
+                    sort: 'download',
+                    categoryid: me.category,
+                    category_group: '1002',
+                    start: 0,
+                    limit: 54,
+                    order: 'down'
+                };
+                o.returnFormat = 'jsonp';
+                json = JSON.stringify(o);
+
+                dojo.io.script.get({
+                    url: URL.replace('@', json),
+                    callbackParamName: 'callback'
+                }).then(function(data){
+                    if (!data) {
+                        if(me.errorCallback && (typeof me.errorCallback === 'function'))
+                            me.errorCallback();
+                        return;
+                    }
+
+                    var serialization;
+                    try {
+                        serialization = JSON.parse(data);
+                    } catch(e) {
+                        throw new Error("request HomePage data from server format error");
+                    }
+                    me.setData(serialization);
+                });
+            });
+        },
+
+        /**
+         * 生成http请求的json数据格式
+         * @override
+         * @return {json}
+         */
+        generatePostJson: function () {
+            // 修正要请求的数据
+            this.postData.data[this.type][this.storePath] = {
                 module: 'applist',
                 type: 'normal',
                 sort: 'download',
-                categoryid: this.sort,
+                categoryid: this.category,
                 category_group: '1002',
                 start: 0,
                 limit: 54,
                 order: 'down'
             };
-            var self = this;
-            // cross domain ajax request callback
-            window.jsonCallback = function (data) {
-                if (!data) {
-                    if (self.errorCallback && (typeof self.errorCallback === 'function'))
-                        self.errorCallback();
-                    return;
-                }
 
-                var serialization;
-                try {
-                    serialization = JSON.parse(data);
-                } catch (e) {
-                    throw new Error("request HomePage data from server format error");
-                }
-                self.setData(serialization);
-            };
-            this.initializeComponents();
+            return this.inherited(arguments);
         },
+
         /**
-         * initialize included components
+         * 初始化页面组件
          */
         initializeComponents: function () {
             this.tab = new website.Required.Tab({
@@ -101,16 +140,32 @@
                 container: dojo.query('div.commonAds')[0]
             });
         },
+
         /**
-         * Data from server side fills in page components
-         * @param data
+         * 根据hash取得各种排序属性
+         */
+        resolveHash: function () {
+            // rules of hash like #1045
+            var hash = location.hash.replace('#', ''),
+                rules = hash.split('/');
+
+            // 类别种类: EG: 1045
+            this.category = rules[0] || '1045';
+        },
+
+        /**
+         * 生成localStorage的翻页存储地址
+         */
+        resolvePath: function () {
+            this.storePath = BASEPATH + this.type + LinkerChar + this.category;
+        },
+
+        /**
+         * 设置页面组件数据源
+         * @param {object} data
          */
         setData: function (data) {
             if (!data) return;
-            var me = this;
-            var useBotAds = false,
-                useComAds = false;
-
             // tab
             if (data[this.IDS.tab]) {
                 this.tab.setData(data[this.IDS.tab]);
@@ -118,12 +173,10 @@
             // bottom ads
             if (data[this.IDS.botAds]) {
                 this.botAds.setData(data[this.IDS.botAds]);
-                useBotAds = true;
             }
             // common ads
             if (data[this.IDS.comAds]) {
                 this.comAds.setData(data[this.IDS.comAds]);
-                useComAds = true;
             }
 
             this.footer.style.display = 'block';
@@ -133,69 +186,27 @@
                 this.loader.destroy();
             }
             this.loader = this.createImgLoader();
-
-            setTimeout(function() {
-                var lc = LocalStorage,
-                    str = JSON.stringify;
-
-                useBotAds && lc.write(me.IDS.botAds, str(data[me.IDS.botAds]));
-                useComAds && lc.write(me.IDS.comAds, str(data[me.IDS.comAds]));
-
-                me.data = data;
-            }, 100);
         },
+
         /**
-         *  First time load page to check whether there
-         *  has data in localStorage
+         *  发起页面数据请求
          */
         getData: function () {
-            var data,
-                i = 0;
-            // tab
-            data = LocalStorage.read(this.IDS.tab);
-            if (data) {
-                this.tab.setData(JSON.parse(data));
-                delete this.postData['data'][this.type][this.IDS.tab];
-                ++i;
-            }
-            // bottom ads
-            data = LocalStorage.read(this.IDS.botAds);
-            if (data) {
-                this.botAds.setData(JSON.parse(data));
-                delete this.postData['data'][this.type][this.IDS.botAds];
-                ++i;
-            }
-            // common ads
-            data = LocalStorage.read(this.IDS.comAds);
-            if (data) {
-                this.comAds.setData(JSON.parse(data));
-                delete this.postData['data'][this.type][this.IDS.comAds];
-                ++i;
-            }
-
-            if (i === 3) {
-                this.footer.style.display = 'block';
-
-                if (this.loader) {
-                    this.loader.destroy();
-                }
-                this.loader = this.createImgLoader();
-            } else {
-                this.sendRequest();
-            }
+            this.sendRequest();
         },
+
         /**
-         * set up module app
+         * 启动页面逻辑
          */
         setup: function () {
             this.getData();
-            //@PingBack
-            $PingBack('msite_app_required_bv');
+            // @PingBack
+            // $PingBack('msite_app_required_bv');
         }
 
     });
-})();
 
-var module;
-module = new website.Required.Module(this);
-module.setup();
+    var module;
+    module = new website.Required.Module();
+    module.setup();
+})(this);

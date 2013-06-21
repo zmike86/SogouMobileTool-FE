@@ -1,25 +1,28 @@
+/**
+ * @description module logic for Category page
+ * @creator Leo
+ */
 (function () {
 
-    var span = 4;
-    var condi = 0;
-    var dom;
-
-    dojo.declare('website.Result.Pager', [website.IComponent], {
-        // attr
+    dojo.declare('website.Result.Pager', [website.IComponent, website.IPager], {
+        // 属性
         parentControl: null,
         template: null,
-        totalPageCount: null,
-        // dom
+        _handlers: null,
+        // 元素
         sorter: null,
         panel: null,
-        pager: null,
         currentSort: null,
 
+        /**
+         * 构造方法
+         * @param configObject
+         */
         constructor: function (configObject) {
             this.container = configObject.container;
             this.parentControl = configObject.parent;
             this.template = YayaTemplate(dojo.byId(configObject.tmplId).innerHTML);
-
+            this._handlers = [];
             var query = dojo.query('ul', this.container);
             this.sorter = query[0];
             this.panel = query[1];
@@ -27,8 +30,12 @@
 
             // 只绑定必要事件
             this.bind();
+            dojo.connect(window, 'onbeforeunload', this, this.dispose);
         },
 
+        /**
+         * 绑定必要事件
+         */
         bind: function () {
             // 切换排序规则
             dojo.connect(this.sorter, 'click', this, function (e) {
@@ -47,133 +54,156 @@
             });
         },
 
+        /**
+         * 绑定数据后绑定事件
+         */
         bindPanel: function () {
+            var me = this;
             // 面板的鼠标响应
             dojo.query('li', this.panel).forEach(function (li) {
                 var btn = dojo.query('span.installbtn', li)[0];
-                dojo.connect(btn, 'mouseenter', this, function (e) {
-                    var target = e.target;
-                    if (/disable/.test(target.className))
-                        return;
-                    dojo.addClass(target, 'installbtnhover');
-                });
-                dojo.connect(btn, 'mouseleave', this, function (e) {
-                    var target = e.target;
-                    if (/disable/.test(target.className))
-                        return;
-                    dojo.removeClass(target, 'installbtnhover installbtnpress');
-                });
-                dojo.connect(btn, 'mousedown', this, function (e) {
-                    var target = e.target;
-                    if (/disable/.test(target.className))
-                        return;
-                    dojo.addClass(target, 'installbtnpress');
-                });
-                dojo.connect(btn, 'mouseup', this, function (e) {
-                    var target = e.target;
-                    if (/disable/.test(target.className))
-                        return;
-                    dojo.removeClass(target, 'installbtnpress');
-                });
-                dojo.connect(btn, 'click', this, website.EventManager.on);
-
-            }, this);
+                me._handlers.push(dojo.connect(btn, 'mouseenter', function () {
+                    if (/disable/.test(btn.className)) return;
+                    dojo.addClass(btn, 'installbtnhover');
+                }));
+                me._handlers.push(dojo.connect(btn, 'mouseleave', function () {
+                    if (/disable/.test(btn.className)) return;
+                    dojo.removeClass(btn, 'installbtnhover installbtnpress');
+                }));
+                me._handlers.push(dojo.connect(btn, 'mousedown', function () {
+                    if (/disable/.test(btn.className)) return;
+                    dojo.addClass(btn, 'installbtnpress');
+                }));
+                me._handlers.push(dojo.connect(btn, 'mouseup', function () {
+                    if (/disable/.test(btn.className)) return;
+                    dojo.removeClass(btn, 'installbtnpress');
+                }));
+                me._handlers.push(dojo.connect(btn, 'click', me, website.EventManager.on));
+            });
         },
 
+        /**
+         * 绑定翻页事件
+         */
         bindPager: function () {
+            var me = this;
             var prevbtn = dojo.query('span.prev', this.pager)[0];
             var nextbtn = dojo.query('span.next', this.pager)[0];
 
-            dojo.connect(prevbtn, 'click', this, function (e) {
-                if (/disable/.test(e.target.className))
+            this._handlers.push(dojo.connect(prevbtn, 'click', function () {
+                if (/disable/.test(prevbtn.className))
                     return;
-                dojo.replaceClass(e.target, 'prevhover', 'prevpress');
+                dojo.replaceClass(prevbtn, 'prevhover', 'prevpress');
                 var shim = [
-                    this.parentControl.type,
-                    this.parentControl.category,
-                    this.parentControl.sort,
-                    parseInt(this.parentControl.pageIndex) - 1
+                    me.parentControl.type,
+                    me.parentControl.category,
+                    me.parentControl.sort,
+                    parseInt(me.parentControl.pageIndex) - 1
                 ];
                 //dojo.hash(shim.join('/'));
 				location.hash = shim.join('/');
-            });
-            dojo.connect(prevbtn, 'mouseenter', this, function (e) {
-                if (/disable/.test(e.target.className)) return;
-                dojo.addClass(e.target, 'prevhover');
-            });
-            dojo.connect(prevbtn, 'mouseleave', this, function (e) {
-                if (/disable/.test(e.target.className)) return;
-                dojo.removeClass(e.target, 'prevhover prevpress');
-            });
-            dojo.connect(prevbtn, 'mousedown', this, function (e) {
-                if (/disable/.test(e.target.className)) return;
-                dojo.addClass(e.target, 'prevpress');
-            });
-            dojo.connect(prevbtn, 'mouseup', this, function (e) {
-                if (/disable/.test(e.target.className)) return;
-                dojo.removeClass(e.target, 'prevpress');
-            });
+            }));
+            this._handlers.push(dojo.connect(prevbtn, 'mouseenter', function () {
+                if (/disable/.test(prevbtn.className)) return;
+                dojo.addClass(prevbtn, 'prevhover');
+            }));
+            this._handlers.push(dojo.connect(prevbtn, 'mouseleave', function () {
+                if (/disable/.test(prevbtn.className)) return;
+                dojo.removeClass(prevbtn, 'prevhover prevpress');
+            }));
+            this._handlers.push(dojo.connect(prevbtn, 'mousedown', function () {
+                if (/disable/.test(prevbtn.className)) return;
+                dojo.addClass(prevbtn, 'prevpress');
+            }));
+            this._handlers.push(dojo.connect(prevbtn, 'mouseup', function () {
+                if (/disable/.test(prevbtn.className)) return;
+                dojo.removeClass(prevbtn, 'prevpress');
+            }));
 
-            dojo.connect(nextbtn, 'click', this, function (e) {
-                if (/disable/.test(e.target.className)) return;
-                dojo.replaceClass(e.target, 'nexthover', 'nextpress');
+            this._handlers.push(dojo.connect(nextbtn, 'click', function () {
+                if (/disable/.test(nextbtn.className)) return;
+                dojo.replaceClass(nextbtn, 'nexthover', 'nextpress');
                 var shim = [
-                    this.parentControl.type,
-                    this.parentControl.category,
-                    this.parentControl.sort,
-                    parseInt(this.parentControl.pageIndex) + 1
+                    me.parentControl.type,
+                    me.parentControl.category,
+                    me.parentControl.sort,
+                    parseInt(me.parentControl.pageIndex) + 1
                 ];
                 //dojo.hash(shim.join('/'));
 				location.hash = shim.join('/');
-			});
-            dojo.connect(nextbtn,'mouseenter', this, function (e) {
-                if (/disable/.test(e.target.className)) return;
-                dojo.addClass(e.target, 'nexthover');
-            });
-            dojo.connect(nextbtn,'mouseleave', this, function (e) {
-                if (/disable/.test(e.target.className)) return;
-                dojo.removeClass(e.target, 'nexthover nextpress');
-            });
-            dojo.connect(nextbtn, 'mousedown', this, function (e) {
-                if (/disable/.test(e.target.className)) return;
-                dojo.addClass(e.target, 'nextpress');
-            });
-            dojo.connect(nextbtn, 'mouseup', this, function (e) {
-                if (/disable/.test(e.target.className)) return;
-                dojo.removeClass(e.target, 'nextpress');
-            });
+			}));
+            this._handlers.push(dojo.connect(nextbtn, 'mouseenter', function () {
+                if (/disable/.test(nextbtn.className)) return;
+                dojo.addClass(nextbtn, 'nexthover');
+            }));
+            this._handlers.push(dojo.connect(nextbtn, 'mouseleave', function () {
+                if (/disable/.test(nextbtn.className)) return;
+                dojo.removeClass(nextbtn, 'nexthover nextpress');
+            }));
+            this._handlers.push(dojo.connect(nextbtn, 'mousedown', function () {
+                if (/disable/.test(nextbtn.className)) return;
+                dojo.addClass(nextbtn, 'nextpress');
+            }));
+            this._handlers.push(dojo.connect(nextbtn, 'mouseup', function () {
+                if (/disable/.test(nextbtn.className)) return;
+                dojo.removeClass(nextbtn, 'nextpress');
+            }));
 
-            dojo.query('a', this.pager).onclick(this, function (e) {
-                dojo.stopEvent(e);
-                var node = e.target.parentNode;
-                if (/selected|abbr/g.test(node.className))
-                    return;
-                dojo.addClass(node, 'selected');
-                var shim = [
-                    this.parentControl.type,
-                    this.parentControl.category,
-                    this.parentControl.sort,
-                    parseInt(e.target.innerHTML)
-                ];
-                //dojo.hash(shim.join('/'));
-				location.hash = shim.join('/');
-			});
+            var as = dojo.query('a', this.pager);
+            dojo.forEach(as, function (a) {
+                me._handlers.push(dojo.connect(a, 'click', function (e) {
+                    dojo.stopEvent(e);
+                    var node = e.target.parentNode;
+                    if (/selected|abbr/g.test(node.className))
+                        return;
+                    dojo.addClass(node, 'selected');
+                    var shim = [
+                        me.parentControl.type,
+                        me.parentControl.category,
+                        me.parentControl.sort,
+                        parseInt(e.target.innerHTML)
+                    ];
+                    //dojo.hash(shim.join('/'));
+                    location.hash = shim.join('/');
+                }));
+            });
         },
 
+        /**
+         * @implements IDispose
+         */
+        dispose: function () {
+            this.disposeInternal_();
+        },
+
+        /**
+         * @implements IDispose
+         */
+        disposeInternal_: function () {
+            dojo.forEach(this._handlers, function (handle) {
+                dojo.disconnect(handle);
+            });
+            this._handlers = [];
+        },
+
+        /**
+         * 设置数据源
+         * @param json
+         */
         setData: function (json) {
             if (!json || json.totalCount == 0) {
+                this.dispose();
                 dojo.empty(this.panel);
                 this.totalPageCount = 0;
-                this.data = null;
                 this.show();
                 this.setFocus();
                 return;
             }
 
+            this.dispose();
             var html = this.template.render(json);
             this.totalPageCount = Math.ceil((json.totalCount || 0) / 14);
             this.panel.innerHTML = html;
-            this.data = json;
 
             this.show();
             this.setFocus();
@@ -181,6 +211,9 @@
             this.bindPager();
         },
 
+        /**
+         * @override IPager
+         */
         setFocus: function () {
             var sort = this.parentControl.sort,
                 currentSort = dojo.query('li[sortid=' + sort + ']', this.sorter)[0],
@@ -216,74 +249,12 @@
             }
         },
 
-        renderPager: function () {
-            // 清空
-            dojo.empty(this.pager);
-
-            var pageIndex = parseInt(this.parentControl.pageIndex);
-            dom = document.createElement('span');
-            dom.className = 'prev';
-            this.pager.appendChild(dom);
-
-            if (this.totalPageCount <= 6)
-                condi = 1; // 全部显示
-
-            else if (pageIndex <= 1 + span)
-                condi = 2; // 前端连续显示
-            else if (pageIndex >= this.totalPageCount - span)
-                condi = 3; // 后端连续显示
-            else
-                condi = 4; // 两端均省略显示
-
-            switch (condi) {
-                case 1:
-                    for (var i = 0; i < this.totalPageCount; i++) {
-                        this.insertSpan(i, pageIndex);
-                    }
-                    break;
-                case 2:
-                    for (var i = 0; i < 5; i++) {
-                        this.insertSpan(i, pageIndex);
-                    }
-                    this.insertAbbr();
-                    this.insertSpan(this.totalPageCount - 1, -1);
-                    break;
-                case 3:
-                    this.insertSpan(0, -1);
-                    this.insertAbbr();
-                    for (var i = this.totalPageCount - 5; i < this.totalPageCount; i++) {
-                        this.insertSpan(i, pageIndex);
-                    }
-                    break;
-                case 4:
-                    this.insertSpan(0, -1);
-                    this.insertAbbr();
-                    for (var i = pageIndex-3; i < pageIndex + 1; i++) {
-                        this.insertSpan(i, pageIndex);
-                    }
-                    this.insertAbbr();
-                    this.insertSpan(this.totalPageCount - 1, -1);
-                    break;
-            }
-
-            dom = document.createElement('span');
-            dom.className = 'next';
-            this.pager.appendChild(dom);
-        },
-
-        insertSpan: function (i, index) {
-            dom = document.createElement('span');
-            dom.innerHTML = "<a href='#'>" + (i+1) + "</a>";
-            dom.className = 'text';
-            ((i + 1) == index) && (dom.className += ' selected ');
-            this.pager.appendChild(dom);
-        },
-
-        insertAbbr: function () {
-            dom = document.createElement('span');
-            dom.innerHTML = '…';
-            dom.className = 'text abbr';
-            this.pager.appendChild(dom);
+        /**
+         * @implements IPager
+         * @return {number}
+         */
+        getCurrentPage: function () {
+            return parseInt(this.parentControl.pageIndex)
         }
 
     })

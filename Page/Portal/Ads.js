@@ -12,14 +12,20 @@ dojo.declare('website.Portal.Ads', website.IComponent, {
     },
 
     setData: function (json) {
-        if (!json || !json.list)
-            return;
+        if (!json || !json.list) return;
 
         var html = this.template.render(json.list[0]);
         this.content.innerHTML = html;
         this.data = json;
         this.show();
         return html;
+    },
+
+    /**
+     * @implements IDispose
+     */
+    dispose: function () {
+        return true;
     }
 
 });

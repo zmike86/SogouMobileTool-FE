@@ -1,34 +1,48 @@
-(function () {
+/**
+ * @description module logic for Category page
+ * @creator Leo
+ */
+(function (global, undefined) {
 
     dojo.declare('website.Category.Navigator', [website.IComponent], {
-
+        // 属性
         parentControl: null,
-        // dom
+        template: null,
+        _handlers: null,
+        // 元素
         content: null, // dynamic content
         langContainer: null,
         sizeContainer: null,
         visualContainer: null,
-        template: null,
         currentCategory: null,
         currentLang: null,
         currentSize: null,
         currentVisual: null,
 
+        /**
+         * 构造方法
+         * @param configObject
+         */
         constructor: function (configObject) {
             this.container = configObject.container;
             this.parentControl = configObject.parent;
             this.template = YayaTemplate(dojo.byId(configObject.tmplId).innerHTML);
-
+            this._handlers = [];
             var query = dojo.query('ul', this.container);
             this.content = query[0];
             this.langContainer = query[1];
             this.sizeContainer = query[2];
             this.visualContainer = query[3];
+
+            dojo.connect(window, 'onbeforeunload', this, this.dispose);
         },
 
+        /**
+         * 绑定数据后绑定事件
+         */
         bind: function () {
             // 切换类别
-            dojo.connect(this.content, 'click', this, function (e) {
+            this._handlers.push(dojo.connect(this.content, 'click', this, function (e) {
                 var target = e.target;
                 if (target.nodeName === 'A') {
                     dojo.stopEvent(e);
@@ -50,9 +64,9 @@
                     ];
                     dojo.hash(shim.join('/'));
                 }
-            });
+            }));
             // 切换语言
-            dojo.connect(this.langContainer, 'click', this, function (e) {
+            this._handlers.push(dojo.connect(this.langContainer, 'click', this, function (e) {
                 var target = e.target;
                 if (target.nodeName === 'A') {
                     dojo.stopEvent(e);
@@ -74,9 +88,9 @@
                     ];
                     dojo.hash(shim.join('/'));
                 }
-            });
+            }));
             // 切换尺寸
-            dojo.connect(this.sizeContainer, 'click', this, function (e) {
+            this._handlers.push(dojo.connect(this.sizeContainer, 'click', this, function (e) {
                 var target = e.target;
                 if (target.nodeName === 'A') {
                     dojo.stopEvent(e);
@@ -98,9 +112,9 @@
                     ];
                     dojo.hash(shim.join('/'));
                 }
-            });
+            }));
             // 切换是否高清
-            dojo.connect(this.visualContainer, 'click', this, function (e) {
+            this._handlers.push(dojo.connect(this.visualContainer, 'click', this, function (e) {
                 var target = e.target;
                 if (target.nodeName === 'A') {
                     dojo.stopEvent(e);
@@ -122,25 +136,31 @@
                     ];
                     dojo.hash(shim.join('/'));
                 }
-            });
+            }));
         },
 
+        /**
+         * 设置数据源
+         * @param json
+         */
         setData: function (json) {
             if (!json || !json.list)
                 return;
 
-            dojo.empty(this.content);
+            this.dispose();
             if (json.list[0].id !== 'all')
                 json.list.splice(0,0,{id:'all', text: '全部'});
 
             var html = this.template.render(json);
             this.content.innerHTML = html;
-            this.data = json;
             this.bind();
             this.show();
             this.setFocus();
         },
 
+        /**
+         * 设置焦点
+         */
         setFocus: function () {
             var category = this.parentControl.category,
                 lang = this.parentControl.lang,
@@ -173,7 +193,6 @@
                 dojo.addClass(this.currentVisual, 'selected');
             }
         }
-
       });
 
 })(this);

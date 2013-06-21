@@ -3,7 +3,7 @@
  * @creator Leo
  */
 
-(function () {
+(function (global, undefined) {
 
     var location = window.location;
     var BASEPATH = 'website_top_';
@@ -15,7 +15,7 @@
     var GameRanks = AppRanks.concat(['childloveRank', 'singlegameRank', 'onlinegameRank']);
 
     dojo.declare('website.Top.Module', [website.IModule], {
-        // attr
+        // 属性
         type: TYPE,
         IDS: {
             downloadRank: BASEPATH + TYPE + '_downloadRank',
@@ -175,9 +175,10 @@
         },
         systemID:       9,
         PAGE_ID:        'top',
+        loader: null,
         footer: dojo.query('div.footer')[0],
 
-        // components
+        // 组件
         downloadRank:   null,
         raiseRank:      null,
         bestRank:       null,
@@ -190,29 +191,15 @@
         botAds:         null,
         comAds:         null,
 
+        /**
+         * 构造方法
+         */
         constructor: function () {
-            //this.getPDAInfor();
-            var self = this;
-            // cross domain ajax request callback
-            window.jsonCallback = function (data) {
-                if (!data) {
-                    if(self.errorCallback && (typeof self.errorCallback === 'function'))
-                        self.errorCallback();
-                    return;
-                }
-
-                var serialization;
-                try {
-                    serialization = JSON.parse(data);
-                } catch(e) {
-                    throw new Error("request HomePage data from server format error");
-                }
-                self.setData(serialization);
-            };
             this.initializeComponents();
         },
+
         /**
-         * initialize included components
+         * 初始化页面组件
          */
         initializeComponents: function () {
             this.downloadRank = new website.Top.Rank({
@@ -291,76 +278,48 @@
                 container: dojo.query('div.commonAds')[0]
             });
         },
+
         /**
-         * Data from server side fills in page components
-         * @param data
+         * 设置页面组件数据源
+         * @param {object} data
          */
         setData: function (data) {
             if (!data)
                 return;
 
-            var me = this;
             var len = (TYPE === 'game' ? GameRanks : AppRanks),
                 j = 0;
-            var lc = LocalStorage,
-                str = JSON.stringify;
 
             for (; j < len.length; j++) {
                 if (data[this.IDS[len[j]]]) {
                     this[len[j]].setData(data[this.IDS[len[j]]]);
-                    (function(index){
-                        setTimeout(function() {
-                            lc.write(me.IDS[len[index]], str(data[me.IDS[len[index]]]));
-                        }, 100);
-                    })(j);
                 }
             }
 
             this.footer.style.display = 'block';
             // 放在这里才是网页上面所有的img元素都被渲染出来的时机
             // 所以ImageLoader在页面的生命周期中应该在此刻初始化
-            this.createImgLoader();
-            me.data = data;
+            this.loader = this.createImgLoader();
         },
 
         /**
-         *  First time load page to check whether there
-         *  has data in localStorage
+         *  发起页面数据请求
          */
         getData: function () {
-            var data,
-                judge = (TYPE === 'game' ? 11 : 8),
-                len = (TYPE === 'game' ? GameRanks : AppRanks),
-                i = j = 0;
-
-            for (; j < len.length; j++) {
-                data = LocalStorage.read(this.IDS[len[j]]);
-                if (data) {
-                    this[len[j]].setData(JSON.parse(data));
-                    delete this.postData['data'][this.type][this.IDS[len[j]]];
-                    ++i;
-                }
-            }
-
-            if (i === judge) {
-                this.footer.style.display = 'block';
-                this.createImgLoader();
-            } else {
-                this.sendRequest();
-            }
+            this.sendRequest();
         },
+
         /**
-         * set up module app
+         * 启动页面逻辑
          */
         setup: function () {
             this.getData();
-            //@PingBack
-            $PingBack('msite_' + this.type + '_top_bv');
+            // @PingBack
+            // $PingBack('msite_' + this.type + '_top_bv');
         }
-
     });
-})();
 
-var module;
-module = new website.Top.Module(this);
-module.setup();
+    var module;
+    module = new website.Top.Module();
+    module.setup();
+})(this);

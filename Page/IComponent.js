@@ -4,7 +4,7 @@
  * @creator Leo
  */
 
-dojo.declare('website.IComponent', website.IDispose, {
+dojo.declare('website.IComponent', [website.IDispose], {
 
     /**
      * @typedef {Object} most outer wrapper dom of this component

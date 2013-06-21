@@ -37,6 +37,7 @@
         delayTimer: null,
         config: null,
         length: null,
+        _handlers: null,
         // dom
         ele: null,
         triggers: null,
@@ -59,6 +60,8 @@
             this.content = config.content || this.panels[0].parentNode;
             this.activeIndex = config.activeIndex;
             this.length = this.panels.length / config.steps;
+            this._handlers = [];
+
             this._init();
         },
 
@@ -87,24 +90,25 @@
          * @private
          */
         _bind: function () {
-            var type = eMap[this.config.triggerType][0];
+            var type = eMap[this.config.triggerType][0],
+                me = this;
             dojo.forEach(this.triggers, function(item, index) {
-                dojo.connect(item, 'click', this, function(evt){
+                me._handlers.push(dojo.connect(item, 'click', function(evt){
                     dojo.stopEvent(evt);
-                    this._triggerOnClick(index);
-                });
-                if (/hover|mouse/.test(this.config.triggerType)) {
-                    dojo.connect(item, type, this, function(evt) {
+                    me._triggerOnClick(index);
+                }));
+                if (/hover|mouse/.test(me.config.triggerType)) {
+                    me._handlers.push(dojo.connect(item, type, function(evt) {
                         dojo.stopEvent(evt);
-                        this._triggerOnMouseEnter(index);
-                    });
-                    dojo.connect(item, eMap[this.config.triggerType][1], this, function(evt) {
+                        me._triggerOnMouseEnter(index);
+                    }));
+                    me._handlers.push(dojo.connect(item, eMap[me.config.triggerType][1], function(evt) {
                         dojo.stopEvent(evt);
-                        this._triggerOnMouseLeave(index);
-                    });
+                        me._triggerOnMouseLeave(index);
+                    }));
                 }
 
-            }, this);
+            });
         },
 
         /**
@@ -249,6 +253,12 @@
         next: function () {
             var activeIndex = this.activeIndex;
             this.switchTo(activeIndex < this.length - 1 ? activeIndex + 1 : 0, 1);
+        },
+
+        dispose: function () {
+            dojo.forEach(this._handlers, function (handle) {
+                dojo.disconnect(handle);
+            });
         }
 
     });
